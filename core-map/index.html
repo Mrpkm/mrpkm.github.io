@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HQ // Core Map — Field Command Desk</title>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ── Command bar (always visible) ── -->
+  <div id="load-bar">
+    <a href="../src/menu/Strategy%20Game%20Menu.html" id="back-btn">← BACK TO HQ</a>
+    <textarea id="paste-textarea" placeholder="// PASTE PRE-GAME BRIEFING CODE…"></textarea>
+    <button id="btn-load">LOAD</button>
+    <span id="parse-error"></span>
+  </div>
+
+  <!-- ── Stage holds either the empty desk or the field map ── -->
+  <div id="stage">
+
+    <!-- ─────────── EMPTY DESK VIEW ─────────── -->
+    <div id="desk-view">
+      <div class="desk-header">
+        <div>
+          <div class="desk-title">Field Command Desk</div>
+          <div class="desk-subtitle">06 JUN 1944 &middot; 04:00 hrs &middot; Map room empty</div>
+        </div>
+        <div class="desk-stamp">AWAITING ORDERS</div>
+      </div>
+
+      <p class="desk-prompt">
+        The map case is empty, Commander. <strong>Drop a sealed briefing onto the desk</strong>
+        and the tactical map will appear &mdash; or pick a routine below to keep yourself busy
+        until the courier arrives.
+      </p>
+
+      <div class="cmd-grid">
+
+        <!-- 1. 2-Player Battle (main play mode) -->
+        <div class="cmd-card primary" data-action="2player">
+          <span class="cmd-key">F1</span>
+          <h4>⚔ 2-Player Battle</h4>
+          <div class="cmd-desc">Face a human opponent on a shared screen &mdash; full attack, counter-strike, terrain and trench rules.</div>
+          <span class="cmd-stat">ENGAGE</span>
+        </div>
+
+        <!-- 2. AI Game (standalone tactical sandbox) -->
+        <div class="cmd-card alert" data-action="ai">
+          <span class="cmd-key">F2</span>
+          <h4>★ AI Game</h4>
+          <div class="cmd-desc">Open the standalone tactical sandbox with NATO symbols and the full rules engine.</div>
+          <span class="cmd-stat">LAUNCH</span>
+        </div>
+
+        <!-- 3. Paste briefing (focus textarea) -->
+        <div class="cmd-card" data-action="paste">
+          <span class="cmd-key">F3</span>
+          <h4>▸ Load Briefing</h4>
+          <div class="cmd-desc">Drop a pre-game code into the slot at the top of the desk and the map unfolds.</div>
+          <span class="cmd-stat">PASTE &amp; LOAD</span>
+        </div>
+
+        <!-- 4. Pre-game setup -->
+        <div class="cmd-card" data-action="setup">
+          <span class="cmd-key">F4</span>
+          <h4>▸ Pre-Game Setup</h4>
+          <div class="cmd-desc">Pick a doctrine, spend war-points, place your army on the half-board.</div>
+          <span class="cmd-stat">OPEN SETUP</span>
+        </div>
+
+        <!-- 5. Last briefing -->
+        <div class="cmd-card" data-action="last">
+          <span class="cmd-key">F5</span>
+          <h4>▸ Restore Last Map</h4>
+          <div class="cmd-desc">Re-open the briefing you most recently loaded (held in the field safe).</div>
+          <span class="cmd-stat" id="last-status">NONE ON FILE</span>
+        </div>
+
+        <!-- 6. Map builder -->
+        <div class="cmd-card" data-action="builder">
+          <span class="cmd-key">F6</span>
+          <h4>▸ Tactical Map Editor</h4>
+          <div class="cmd-desc">Place terrain, decorations and unit tokens before sealing the briefing.</div>
+          <span class="cmd-stat">OPEN BUILDER</span>
+        </div>
+
+      </div>
+
+      <div class="desk-dropzone">
+        <span><b>HINT.</b> Briefings arrive from the Pre-Game Setup screen automatically &mdash;
+          this desk reads the field safe (localStorage) on every load.</span>
+        <span class="blink">_</span>
+      </div>
+
+      <div class="desk-footer">
+        <span>// WEATHER: OVERCAST &middot; WIND SW 4 KTS</span>
+        <span>// SIG: STRONG <span class="blink">▮</span></span>
+      </div>
+    </div>
+
+    <!-- ─────────── FIELD MAP VIEW ─────────── -->
+    <div id="map-view">
+
+      <div class="field-map">
+        <div class="map-cap">
+          <h3 id="mc-title">Tactical Map &middot; SECTOR 06-N</h3>
+          <span class="map-coord" id="mc-coords">12×11 &middot; HCRAFT</span>
+        </div>
+
+        <div class="compass">
+          <span class="n">N</span>
+          <span class="s">S</span>
+          <span class="e">E</span>
+          <span class="w">W</span>
+        </div>
+
+        <div id="map-root"></div>
+
+        <div style="display:flex; justify-content:space-between; font-family:'VT323',monospace; font-size:13px; color:var(--olive); letter-spacing:1px; padding-top:6px; border-top:1px dashed var(--olive); margin-top:4px;">
+          <span id="mc-doctrine-sticker"></span>
+          <span><span class="blink">●</span> LIVE &middot; CLICK A UNIT TO SELECT</span>
+        </div>
+      </div>
+
+      <aside class="side-col">
+        <section class="overview">
+          <div class="ov-cap">
+            <h4>Sector Overview</h4>
+            <span class="ov-coord" id="ov-coords">—</span>
+          </div>
+          <div id="minimap-root" class="minimap"></div>
+        </section>
+
+      <div class="dossier">
+        <h3>Briefing Dossier</h3>
+
+        <!-- ── Normal single-player dossier content ── -->
+        <div id="normal-dossier-content">
+
+          <h4>Doctrine</h4>
+          <div class="doctrine-line" id="d-doctrine">
+            <img id="d-doctrine-img" alt="" />
+            <div>
+              <div class="name" id="d-doctrine-name">—</div>
+              <div class="wp-bar"><span class="nb" id="d-doctrine-alias"></span></div>
+            </div>
+          </div>
+
+          <h4>War Points</h4>
+          <div class="wp-bar">
+            BUDGET <span class="nb" id="d-wp-budget">—</span> &middot;
+            SPENT <span class="nb" id="d-wp-spent">—</span> &middot;
+            LEFT <span class="nb" id="d-wp-left">—</span>
+          </div>
+
+          <h4>Order of Battle</h4>
+          <div id="d-inventory"></div>
+
+          <h4>Map Legend</h4>
+          <div class="legend-grid">
+            <span><span class="sw P"></span>Plains</span>
+            <span><span class="sw F"></span>Forest</span>
+            <span><span class="sw M"></span>Mountain</span>
+            <span><span class="sw S"></span>Swamp</span>
+          </div>
+
+          <h4>Selection</h4>
+          <div class="sel-card" id="d-selection">
+            <div class="sel-empty">No unit selected. Click a token on the map.</div>
+          </div>
+
+          <div class="action-row">
+            <button id="btn-clear">↩ Clear Map</button>
+            <button id="btn-rules">Rules</button>
+            <button id="btn-setup" class="danger">New Briefing</button>
+          </div>
+
+          <h4>AI Advisor</h4>
+          <div id="advisor-panel">
+            <div style="font-family:'VT323',monospace;font-size:13px;letter-spacing:1px;color:var(--olive);">
+              BRIDGE: <span id="bridge-status" style="color:#e2b65a;">CONNECTING…</span>
+            </div>
+            <div class="action-row" style="margin-top:6px;">
+              <button id="btn-advise">▸ Advise</button>
+              <button id="btn-claude">★ Claude</button>
+            </div>
+            <div id="advisor-output" style="margin-top:6px;font-size:11px;line-height:1.5;min-height:36px;"></div>
+          </div>
+
+          <h4>AI Learning Loop</h4>
+          <div id="agent-loop-panel">
+            <div class="agent-loop-note">Load a briefing, then start the 4-agent real-game learning cycle.</div>
+          </div>
+
+        </div><!-- /#normal-dossier-content -->
+
+        <!-- ── 2-Player Battle panel (hidden until 2P mode starts) ── -->
+        <div id="twp-panel" style="display:none;">
+
+          <h4>Battle Status</h4>
+          <div id="twp-turn-strip">
+            <span id="twp-player-stamp" class="twp-stamp twp-stamp-p1">PLAYER 1</span>
+            <span id="twp-actions-count" style="font-family:'VT323',monospace;font-size:14px;color:var(--olive);letter-spacing:1px;"></span>
+          </div>
+          <div id="twp-rot-indicator" style="font-family:'VT323',monospace;font-size:12px;color:var(--teal);letter-spacing:1px;margin-top:4px;opacity:0.8;"></div>
+
+          <h4>Selected Unit</h4>
+          <div id="twp-selection-info" style="min-height:56px;padding:6px 0;"></div>
+
+          <h4>Mode</h4>
+          <div class="twp-mode-row">
+            <button id="twp-btn-move"   class="twp-mode-active">▸ Move</button>
+            <button id="twp-btn-attack">⚔ Attack</button>
+            <button id="twp-btn-rotate">↻ Rotate</button>
+          </div>
+          <div id="twp-mode-hint" class="twp-hint"></div>
+
+          <h4>Map Legend</h4>
+          <div class="legend-grid">
+            <span><span class="sw P"></span>Plains</span>
+            <span><span class="sw F"></span>Forest</span>
+            <span><span class="sw M"></span>Mountain</span>
+            <span><span class="sw S"></span>Swamp</span>
+          </div>
+
+          <h4>Briefing</h4>
+          <div style="font-family:'VT323',monospace;font-size:12px;color:var(--olive);letter-spacing:1px;margin-bottom:4px;">
+            Paste a Pre-Game Briefing code to load a custom map &amp; army. Saved until you change it.
+          </div>
+          <textarea id="twp-brief-input"
+            placeholder="// Paste Pre-Game Briefing here…"
+            style="width:100%;height:56px;font-family:'Courier Prime',monospace;font-size:10px;
+                   background:var(--ink-dark,#1a1208);color:#d9e8e9;border:1px solid rgba(111,211,214,0.4);
+                   padding:4px 6px;resize:vertical;outline:none;"></textarea>
+          <div style="display:flex;gap:4px;margin-top:4px;">
+            <button id="twp-btn-load-brief" style="flex:2;font-family:'Special Elite',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 0;border:1px solid var(--ink);background:var(--paper-light);color:var(--ink);cursor:pointer;">▸ Load</button>
+            <button id="twp-btn-clear-brief" style="flex:1;font-family:'Special Elite',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 0;border:1px solid var(--olive);background:transparent;color:var(--olive);cursor:pointer;">↺ Default</button>
+          </div>
+          <div id="twp-brief-status" style="font-family:'VT323',monospace;font-size:12px;color:var(--olive);letter-spacing:1px;margin-top:3px;min-height:16px;"></div>
+
+          <h4>Combat Log</h4>
+          <div id="twp-log" class="twp-log"></div>
+
+          <div class="action-row" style="margin-top:10px;">
+            <button id="twp-btn-new">↩ New Battle</button>
+            <button id="twp-btn-end" class="danger" style="font-weight:700;">End Turn ▸ P2</button>
+          </div>
+
+          <!-- Winner overlay inside dossier -->
+          <div id="twp-winner" style="display:none;margin-top:14px;padding:14px;background:var(--ink);border:2px solid var(--teal);text-align:center;">
+            <div id="twp-winner-text" style="font-family:'Special Elite',monospace;font-size:20px;color:var(--teal);letter-spacing:4px;">PLAYER 1 WINS</div>
+            <div style="font-family:'Courier Prime',monospace;font-size:11px;color:var(--paper-dark);margin-top:6px;">The opposing force has been routed.</div>
+          </div>
+
+        </div><!-- /#twp-panel -->
+
+      </div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div id="hint">▸ Drop a briefing on the desk, or pick a routine</div>
+
+  <!-- Combat engine & 2-player mode -->
+  <script src="js/combat.js"></script>
+  <script src="js/twoPlayerMode.js"></script>
+
+  <!-- Globals -->
+  <script src="../src/tools/pathfinder.js"></script>
+  <script src="../src/tools/unit-movement.js"></script>
+  <script src="../src/tools/chroma-renderer.js"></script>
+
+  <!-- Game modules -->
+  <script src="js/state/parser.js"></script>
+  <script src="js/state/gameState.js"></script>
+  <script src="js/render/mapRenderer.js"></script>
+  <script src="js/render/minimapRenderer.js"></script>
+  <script src="js/bridges/chromaBridge.js"></script>
+  <script src="js/render/unitRenderer.js"></script>
+  <script src="js/bridges/engineBridge.js"></script>
+  <script src="js/bridges/orchestrationBridge.js"></script>
+  <script src="js/bridges/aiAgentsBridge.js"></script>
+  <script src="js/interaction/selection.js"></script>
+  <script src="js/interaction/input.js"></script>
+  <script src="js/dossier.js"></script>
+  <script src="js/main.js"></script>
+
+  <!-- Briefing auto-load bridge (pregame-setup → core-map via localStorage) -->
+  <script>
+    (function () {
+      var ta  = document.getElementById('paste-textarea');
+      var btn = document.getElementById('btn-load');
+      if (!ta || !btn) return;
+
+      /* ── Two-player dual-brief flow ── */
+      var bothReady = localStorage.getItem('twp_both_ready');
+      if (bothReady) {
+        localStorage.removeItem('twp_both_ready');
+        var p1Code = localStorage.getItem('twp_p1_brief') || null;
+        var p2Code = localStorage.getItem('twp_p2_brief') || null;
+        var mapCode = p1Code || p2Code;
+        if (mapCode) { ta.value = mapCode; btn.click(); }
+        if (window.TwoPlayerMode) window.TwoPlayerMode.startWithBriefs(p1Code, p2Code);
+        return;
+      }
+
+      /* ── Legacy single-brief / autostart flow ── */
+      var code = localStorage.getItem('pregame_briefing');
+      var is2P = localStorage.getItem('twp_autostart');
+      if (!code) return;
+      localStorage.removeItem('pregame_briefing');
+      if (is2P) localStorage.removeItem('twp_autostart');
+      ta.value = code;
+      btn.click();
+      if (is2P && window.TwoPlayerMode) window.TwoPlayerMode.startFromBriefing();
+    })();
+  </script>
+
+  <!-- Desk view command-button wiring -->
+  <script src="js/desk.js"></script>
+
+</body>
+</html>

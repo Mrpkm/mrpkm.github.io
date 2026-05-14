@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Pre-Game Setup — AI Strategy Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --ink: #2a1f17;
+    --ink-soft: #4a3a2a;
+    --paper: #efe2c4;
+    --paper-2: #e6d6b0;
+    --paper-dark: #d2bd88;
+    --paper-shadow: rgba(40, 25, 10, 0.45);
+    --teal: #6fd3d6;
+    --red: #9d2a2a;
+    --gold: #c89a3a;
+    --green: #4a6b3a;
+    --blue: #2a5a7a;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #0a0a0a;
+    color: var(--ink);
+    font-family: 'Courier Prime', 'Courier New', monospace;
+    min-height: 100%;
+    overflow-x: hidden;
+  }
+
+  /* ---------- Desk frame ---------- */
+  .desk {
+    position: relative;
+    min-height: 100vh;
+    padding: 24px 32px 60px;
+  }
+  .desk-bg {
+    position: fixed; inset: 0;
+    background-image: url('../../assets/game-icons/wood_background.jpg');
+    background-size: 480px 480px;
+    background-repeat: repeat;
+    image-rendering: pixelated;
+    opacity: 0.95;
+    z-index: -2;
+  }
+  .desk-vignette {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.55) 100%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* ---------- Header strip ---------- */
+  .header-strip {
+    display: flex; justify-content: space-between; align-items: center;
+    color: #f0e6cd;
+    margin: 4px 12px 18px;
+    font-family: 'Special Elite', monospace;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.7);
+  }
+  .hs-title { font-size: 28px; letter-spacing: 6px; }
+  .hs-sub { font-size: 13px; letter-spacing: 3px; opacity: 0.75; margin-top: 2px; font-family: 'VT323', monospace; }
+  .hs-right { display: flex; align-items: center; gap: 16px; }
+  .hs-page { font-family: 'VT323', monospace; letter-spacing: 3px; font-size: 18px; opacity: 0.85; }
+
+  /* ---------- Folder + ears ---------- */
+  .folder { max-width: 1480px; margin: 0 auto; position: relative; }
+  .ear-row {
+    display: flex; align-items: flex-end;
+    gap: 6px; padding: 0 26px; margin-bottom: -3px;
+    position: relative; z-index: 5;
+  }
+  .ear {
+    appearance: none; border: 0; background: transparent;
+    padding: 0; margin: 0; cursor: pointer; font-family: inherit;
+    transform: translateY(6px);
+    transition: transform .18s ease, filter .18s ease;
+    flex: 0 0 auto;
+  }
+  .ear .ear-inner {
+    background: var(--paper-dark);
+    border: 2px solid var(--ink); border-bottom: none;
+    border-top-left-radius: 14px 18px; border-top-right-radius: 14px 18px;
+    padding: 10px 18px 16px 18px; min-width: 200px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: inset 0 1px 0 rgba(255,240,200,0.5), 0 -3px 0 rgba(0,0,0,0.18) inset, 0 6px 14px rgba(0,0,0,0.55);
+    position: relative;
+    background-image:
+      repeating-linear-gradient(180deg, rgba(120,90,40,0.05) 0 2px, transparent 2px 5px),
+      radial-gradient(ellipse at top, rgba(255,235,180,0.25), transparent 60%);
+  }
+  .ear .ear-inner::before {
+    content: ''; position: absolute; top: 6px; right: 6px;
+    width: 8px; height: 8px; background: rgba(40,25,10,0.4); border-radius: 2px;
+  }
+  .ear:hover { transform: translateY(0); filter: brightness(1.05); }
+  .ear.active { transform: translateY(0); z-index: 6; }
+  .ear.active .ear-inner {
+    background: var(--paper);
+    box-shadow: inset 0 1px 0 rgba(255,240,200,0.7), 0 8px 20px rgba(0,0,0,0.6);
+  }
+  .ear.active .ear-inner::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -3px; height: 6px;
+    background: var(--paper);
+  }
+  .ear-icon { width: 36px !important; height: 36px !important; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.4)); }
+  .ear-label { font-family: 'Special Elite', monospace; font-size: 14px; letter-spacing: 2.5px; color: var(--ink); white-space: nowrap; }
+
+  /* ---------- Paper sheet ---------- */
+  .paper {
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 0 0 0 4px var(--paper-dark), 0 0 0 6px var(--ink), 0 30px 80px rgba(0,0,0,0.7);
+    padding: 28px 36px 36px; position: relative;
+    background-image:
+      repeating-linear-gradient(0deg, rgba(120,90,40,0.04) 0 2px, transparent 2px 5px),
+      radial-gradient(ellipse at top left, rgba(150,100,30,0.10), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(80,40,10,0.12), transparent 60%);
+  }
+  .paper::before, .paper::after {
+    content: ''; position: absolute; width: 70px; height: 70px;
+    background: linear-gradient(135deg, rgba(40,25,10,0.18), transparent 50%); pointer-events: none;
+  }
+  .paper::before { top: 0; left: 0; }
+  .paper::after { bottom: 0; right: 0; transform: rotate(180deg); }
+  .page { position: relative; min-height: 760px; }
+
+  /* ---------- Page head ---------- */
+  .page-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 2px dashed var(--ink-soft); padding-bottom: 16px; margin-bottom: 22px;
+  }
+  .page-title-wrap { display: flex; align-items: center; gap: 18px; }
+  .page-icon { width: 80px !important; height: 80px !important; image-rendering: pixelated; filter: drop-shadow(2px 3px 0 rgba(0,0,0,0.35)); }
+  .kicker { font-family: 'VT323', monospace; letter-spacing: 4px; font-size: 14px; color: var(--red); text-transform: uppercase; }
+  .page-title { font-family: 'Special Elite', monospace; font-size: 44px; margin: 2px 0 2px; letter-spacing: 4px; text-transform: uppercase; color: var(--ink); }
+  .page-sub { font-family: 'VT323', monospace; font-size: 18px; letter-spacing: 2px; color: var(--ink-soft); }
+  .stamp {
+    display: inline-block; font-family: 'Special Elite', monospace;
+    border: 2px solid var(--red); color: var(--red);
+    padding: 4px 12px; font-size: 14px; letter-spacing: 3px; text-transform: uppercase;
+    background: rgba(239, 226, 196, 0.4);
+  }
+
+  /* ---------- War-points HUD ---------- */
+  .wp-hud {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(40,25,10,0.06); border: 2px solid var(--ink);
+    padding: 10px 16px;
+    box-shadow: inset 0 1px 0 rgba(255,240,200,0.6), 3px 3px 0 rgba(0,0,0,0.25);
+    position: relative;
+  }
+  .wp-hud.over { border-color: var(--red); background: rgba(157,42,42,0.12); }
+  .wp-icon { width: 64px !important; height: 64px !important; image-rendering: pixelated; filter: drop-shadow(1px 2px 0 rgba(0,0,0,0.4)); }
+  .wp-num { line-height: 1; }
+  .wp-big { font-family: 'Special Elite', monospace; font-size: 42px; color: var(--ink); }
+  .wp-of { color: var(--ink-soft); font-size: 22px; letter-spacing: 1px; }
+  .wp-cap { font-family: 'VT323', monospace; letter-spacing: 4px; font-size: 16px; color: var(--ink-soft); margin-top: 4px; }
+  .wp-hud.over .wp-big { color: var(--red); }
+
+  /* ---------- Signature card ---------- */
+  .sig-card {
+    border: 2px solid var(--ink); border-left: 6px solid;
+    background: rgba(255, 245, 215, 0.7);
+    padding: 10px 16px; margin-bottom: 12px; box-shadow: 3px 3px 0 rgba(0,0,0,0.15);
+  }
+  .sig-title { font-family: 'Special Elite', monospace; letter-spacing: 3px; font-size: 14px; text-transform: uppercase; color: var(--red); margin-bottom: 4px; }
+  .sig-body { font-family: 'Courier Prime', monospace; font-size: 14px; color: var(--ink); }
+
+  /* ---------- Page columns ---------- */
+  .page-cols { display: grid; grid-template-columns: 1fr 1.15fr; gap: 22px; margin-bottom: 22px; }
+  .card { background: rgba(255, 248, 222, 0.65); border: 2px solid var(--ink); padding: 16px 18px; box-shadow: 4px 4px 0 rgba(0,0,0,0.18); position: relative; }
+  .card-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid rgba(40,25,10,0.4); padding-bottom: 8px; margin-bottom: 12px;
+  }
+  .card h3 { font-family: 'Special Elite', monospace; font-size: 20px; letter-spacing: 2.5px; text-transform: uppercase; margin: 0; color: var(--ink); }
+  .muted { color: var(--ink-soft); font-weight: normal; font-size: 13px; letter-spacing: 1px; }
+  .card-controls { display: flex; align-items: center; gap: 12px; }
+  .card-hint { font-family: 'VT323', monospace; font-size: 14px; letter-spacing: 1.5px; color: var(--ink-soft); }
+
+  /* ---------- Free-army roster ---------- */
+  .free-roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+  .free-pip { display: flex; align-items: center; gap: 10px; background: rgba(40,25,10,0.06); border: 1px dashed var(--ink-soft); padding: 8px 10px; }
+  .pip-icon { width: 42px !important; height: 42px !important; image-rendering: pixelated; }
+  .pip-name { font-family: 'Special Elite', monospace; font-size: 13px; letter-spacing: 1.5px; }
+  .pip-count { font-family: 'VT323', monospace; font-size: 22px; color: var(--red); line-height: 1; margin-top: 2px; }
+
+  /* ---------- Plain compose ---------- */
+  .plain-tally { font-family: 'Special Elite', monospace; text-align: right; font-size: 18px; letter-spacing: 2px; color: var(--ink); margin-bottom: 6px; }
+  .plain-tally span { font-size: 28px; color: var(--red); margin-right: 4px; }
+  .plain-tally .warn { color: var(--red); font-size: 12px; }
+
+  /* ---------- Unit row ---------- */
+  .unit-row { display: grid; grid-template-columns: 60px 1fr auto; gap: 12px; align-items: center; padding: 10px 8px; border-bottom: 1px dotted rgba(40,25,10,0.3); }
+  .unit-row:last-child { border-bottom: none; }
+  .unit-row.dis { opacity: 0.42; filter: grayscale(0.85); pointer-events: none; }
+  .unit-icon-wrap { width: 60px; height: 60px; background: rgba(40,25,10,0.08); border: 1px solid var(--ink-soft); display: grid; place-items: center; }
+  .unit-icon { width: 56px !important; height: 56px !important; image-rendering: pixelated; }
+  .unit-meta { min-width: 0; }
+  .unit-name { font-family: 'Special Elite', monospace; font-size: 16px; letter-spacing: 2px; color: var(--ink); text-transform: uppercase; }
+  .unit-stats { font-family: 'VT323', monospace; font-size: 16px; letter-spacing: 1px; color: var(--ink-soft); margin-top: 1px; }
+  .unit-cost { font-family: 'Courier Prime', monospace; font-size: 12px; color: var(--ink); margin-top: 2px; }
+  .unit-cost .dot { display: inline-block; width: 8px; height: 8px; background: var(--gold); border-radius: 50%; border: 1px solid var(--ink); vertical-align: middle; margin-right: 6px; }
+  .unit-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .free-tag { font-family: 'VT323', monospace; font-size: 12px; letter-spacing: 1px; background: rgba(40,25,10,0.12); color: var(--ink); padding: 2px 6px; border: 1px solid var(--ink-soft); }
+
+  /* ---------- Stepper ---------- */
+  .stepper { display: inline-flex; align-items: center; border: 2px solid var(--ink); background: var(--paper); box-shadow: 2px 2px 0 rgba(0,0,0,0.2); }
+  .stepper button { appearance: none; border: 0; background: transparent; width: 32px; height: 32px; font-family: 'Special Elite', monospace; font-size: 18px; color: var(--ink); cursor: pointer; }
+  .stepper button:hover:not(:disabled) { background: rgba(40,25,10,0.1); }
+  .stepper button:disabled { color: var(--ink-soft); opacity: 0.4; cursor: not-allowed; }
+  .stepper-val { min-width: 36px; text-align: center; font-family: 'Special Elite', monospace; font-size: 18px; color: var(--ink); background: rgba(40,25,10,0.08); height: 32px; line-height: 32px; padding: 0 6px; border-left: 1px solid var(--ink); border-right: 1px solid var(--ink); }
+
+  /* ---------- Red X reject button ---------- */
+  .red-x { appearance: none; width: 30px; height: 30px; border: 2px solid var(--red); background: rgba(239,226,196,0.6); color: var(--red); font-family: 'Special Elite', monospace; font-weight: bold; font-size: 16px; line-height: 1; cursor: pointer; box-shadow: 2px 2px 0 rgba(0,0,0,0.2); transition: transform .12s ease; }
+  .red-x:hover { transform: scale(1.06); }
+  .red-x.on { background: var(--red); color: var(--paper); transform: rotate(-6deg); }
+  .reject-banner { background: rgba(157,42,42,0.12); border: 1px dashed var(--red); color: var(--red); font-family: 'Special Elite', monospace; text-transform: uppercase; letter-spacing: 3px; font-size: 13px; padding: 6px 10px; margin-bottom: 10px; text-align: center; }
+
+  .cap-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; background: rgba(40,25,10,0.14); border: 1px solid var(--ink); padding: 10px 14px; margin-bottom: 14px; font-family: 'VT323', monospace; font-size: 16px; letter-spacing: 3px; color: var(--ink); }
+  .cap-bar span { text-align: center; border-right: 1px dashed rgba(40,25,10,0.4); }
+  .cap-bar span:last-child { border-right: none; }
+
+  /* ---------- XP rows ---------- */
+  .xp-row { padding: 10px 0; border-bottom: 1px dotted rgba(40,25,10,0.3); }
+  .xp-row:last-child { border-bottom: none; }
+  .xp-row.dis { opacity: 0.45; filter: grayscale(0.8); pointer-events: none; }
+  .xp-row-head { display: flex; justify-content: space-between; font-family: 'Special Elite', monospace; letter-spacing: 2px; font-size: 14px; text-transform: uppercase; color: var(--ink); margin-bottom: 6px; }
+  .xp-cap { font-family: 'VT323', monospace; font-size: 14px; color: var(--ink-soft); }
+  .xp-locked { font-family: 'Special Elite', monospace; font-size: 12px; color: var(--red); letter-spacing: 2px; padding: 4px 0; }
+  .xp-slots { display: flex; flex-direction: column; gap: 6px; }
+  .xp-slot { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 10px; background: rgba(40,25,10,0.05); border: 1px solid var(--ink-soft); padding: 4px 8px; }
+  .rank-img { width: 32px !important; height: 32px !important; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.4)); }
+  .rank-name { font-family: 'Special Elite', monospace; font-size: 13px; letter-spacing: 1.5px; }
+  .rank-cost { font-family: 'VT323', monospace; font-size: 13px; color: var(--ink-soft); }
+  .rank-controls { display: flex; align-items: center; gap: 4px; }
+  .rank-controls button { appearance: none; border: 1px solid var(--ink); background: var(--paper); width: 26px; height: 26px; font-family: 'Special Elite', monospace; font-size: 12px; cursor: pointer; color: var(--ink); }
+  .rank-controls button:hover:not(:disabled) { background: rgba(40,25,10,0.12); }
+  .rank-controls button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .rank-lvl { font-family: 'Special Elite', monospace; font-size: 13px; min-width: 20px; text-align: center; color: var(--red); }
+  .rank-rm { color: var(--red) !important; border-color: var(--red) !important; }
+  .xp-add { appearance: none; border: 1px dashed var(--ink-soft); background: transparent; color: var(--ink); font-family: 'VT323', monospace; font-size: 14px; letter-spacing: 2px; padding: 6px 10px; cursor: pointer; align-self: flex-start; }
+  .xp-add:hover:not(:disabled) { background: rgba(40,25,10,0.08); }
+
+  /* ---------- Bonus rows ---------- */
+  .bonus-row { display: grid; grid-template-columns: 80px 1fr auto; gap: 14px; align-items: center; padding: 10px 4px; border-bottom: 1px dotted rgba(40,25,10,0.3); }
+  .bonus-row:last-child { border-bottom: none; }
+  .bonus-row.dis { opacity: 0.4; filter: grayscale(0.85); pointer-events: none; }
+  .bonus-icon { width: 76px !important; height: 56px !important; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.35)); }
+  .bonus-name { font-family: 'Special Elite', monospace; font-size: 16px; letter-spacing: 2px; text-transform: uppercase; color: var(--ink); }
+  .bonus-desc { font-family: 'VT323', monospace; font-size: 15px; color: var(--ink-soft); margin-top: 2px; letter-spacing: 1px; }
+
+  /* ---------- Briefing page ---------- */
+  .brief-stamp { display: grid; place-items: center; padding: 0 4px; }
+  .brief-actions { display: flex; gap: 10px; }
+  .btn { appearance: none; border: 2px solid var(--ink); background: var(--paper); font-family: 'Special Elite', monospace; letter-spacing: 2px; font-size: 13px; text-transform: uppercase; padding: 8px 14px; cursor: pointer; color: var(--ink); box-shadow: 3px 3px 0 rgba(0,0,0,0.2); }
+  .btn:hover { background: var(--paper-2); }
+  .btn.alt { background: var(--ink); color: var(--paper); }
+  .btn.alt:hover { background: var(--ink-soft); }
+  .brief-cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 22px; }
+  .md-pre { background: #f8f1d8; border: 1px solid var(--ink-soft); padding: 14px 16px; font-family: 'Courier Prime', monospace; font-size: 13px; color: var(--ink); white-space: pre-wrap; line-height: 1.55; max-height: 720px; overflow: auto; margin: 0; }
+
+  /* mini map */
+  .mini-map { display: grid; gap: 2px; padding: 8px; background: rgba(40,25,10,0.12); border: 1px solid var(--ink-soft); }
+  .mm-row { display: grid; grid-template-columns: repeat(11, 1fr); gap: 2px; }
+  .mm-cell { aspect-ratio: 1 / 1; display: grid; place-items: center; font-family: 'VT323', monospace; font-size: 14px; color: rgba(0,0,0,0.55); border: 1px solid rgba(0,0,0,0.25); }
+  .mm-P { background: #b6c97a; }
+  .mm-F { background: #4a7a3a; color: #f0e6cd; }
+  .mm-M { background: #8a8378; }
+  .mm-S { background: #6a6f3a; color: #f0e6cd; }
+  .biome-legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px; font-family: 'VT323', monospace; font-size: 16px; letter-spacing: 1px; color: var(--ink); }
+  .biome-legend > div { display: flex; align-items: center; gap: 6px; }
+  .sw { width: 18px; height: 18px; border: 1px solid var(--ink); display: inline-block; }
+  .mm-cell .mm-unit { width: 80% !important; height: 80% !important; image-rendering: pixelated; }
+
+  /* Compact doctrine page-head */
+  .page-head.compact { padding-bottom: 12px; margin-bottom: 14px; }
+  .page-head.compact .page-icon { width: 64px !important; height: 64px !important; }
+  .page-head.compact .page-title { font-size: 34px; letter-spacing: 3px; }
+  .page-head.compact .kicker { font-size: 12px; letter-spacing: 3px; }
+  .page-head.compact .page-sub { font-size: 14px; letter-spacing: 1.5px; }
+  .page-head.compact .wp-icon { width: 52px !important; height: 52px !important; }
+  .page-head.compact .wp-big { font-size: 34px; }
+  .page-head.compact .wp-cap { font-size: 13px; letter-spacing: 3px; }
+
+  /* ---------- Sub-tab nav ---------- */
+  .subnav { margin: 6px 0 0; }
+  .subnav-step { background: rgba(40,25,10,0.10); border: 1px solid var(--ink-soft); border-bottom: none; padding: 6px 14px; font-family: 'VT323', monospace; font-size: 16px; letter-spacing: 2px; color: var(--ink-soft); text-transform: uppercase; border-top-left-radius: 4px; border-top-right-radius: 4px; width: fit-content; }
+  .subnav-step b { font-family: 'Special Elite', monospace; color: var(--red); font-size: 18px; letter-spacing: 1px; }
+  .subnav-hint { color: var(--ink); letter-spacing: 1px; }
+  .subear-row { display: flex; gap: 6px; margin: 0; padding: 0 4px; flex-wrap: wrap; position: relative; z-index: 3; }
+  .subear {
+    appearance: none; border: 2px solid var(--ink);
+    background: var(--paper-dark);
+    background-image: repeating-linear-gradient(180deg, rgba(120,90,40,0.05) 0 2px, transparent 2px 5px), radial-gradient(ellipse at top, rgba(255,235,180,0.3), transparent 70%);
+    border-bottom: none; border-top-left-radius: 10px 14px; border-top-right-radius: 10px 14px;
+    padding: 10px 18px 14px; min-width: 138px; cursor: pointer; font-family: inherit;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transform: translateY(8px); transition: transform .16s ease, background .16s ease;
+    box-shadow: inset 0 1px 0 rgba(255,240,200,0.5), 0 -3px 0 rgba(0,0,0,0.18) inset, 0 5px 12px rgba(0,0,0,0.4);
+    position: relative;
+  }
+  .subear:hover { transform: translateY(2px); background: var(--paper-2); }
+  .subear.active { background: #f6ecd0; transform: translateY(0); box-shadow: inset 0 1px 0 rgba(255,240,200,0.7), 0 6px 14px rgba(0,0,0,0.45); }
+  .subear.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: -3px; height: 6px; background: #f6ecd0; }
+  .subear-num { position: absolute; top: 4px; left: 8px; font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 1px; color: var(--red); opacity: 0.8; }
+  .subear-icon { width: 44px !important; height: 44px; image-rendering: pixelated; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.4)); }
+  .subear-label { font-family: 'Special Elite', monospace; font-size: 13px; letter-spacing: 2.5px; color: var(--ink); }
+  .sub-paper { background: #f6ecd0; border: 2px solid var(--ink); padding: 18px 22px; margin-bottom: 14px; box-shadow: inset 0 1px 0 rgba(255,240,200,0.5); position: relative; }
+  .sub-card { background: rgba(255, 248, 222, 0.65); border: 2px solid var(--ink); padding: 18px 20px; box-shadow: 4px 4px 0 rgba(0,0,0,0.18); }
+
+  /* Bigger free-roster pips on Roster page */
+  .free-roster.lg { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+  .free-pip.lg { padding: 14px 16px; }
+  .pip-icon.lg { width: 64px !important; height: 64px; }
+  .free-pip.lg .pip-name { font-size: 15px; }
+  .free-pip.lg .pip-count { font-size: 28px; }
+
+  /* ---------- Parade strip ---------- */
+  .parade { background: rgba(40, 25, 10, 0.06); border: 1px solid var(--ink-soft); padding: 10px 14px 12px; margin-top: 4px; }
+  .parade-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(40,25,10,0.4); padding-bottom: 6px; margin-bottom: 10px; }
+  .parade-title { font-family: 'Special Elite', monospace; letter-spacing: 4px; font-size: 14px; text-transform: uppercase; color: var(--ink); }
+  .parade-count { font-family: 'VT323', monospace; font-size: 16px; letter-spacing: 2px; color: var(--ink-soft); }
+  .parade-body { display: flex; flex-wrap: wrap; gap: 12px; }
+  .parade-empty { font-family: 'VT323', monospace; color: var(--ink-soft); font-size: 16px; letter-spacing: 2px; padding: 8px 0; }
+  .parade-pip { display: flex; flex-direction: column; align-items: center; background: rgba(255,248,222,0.6); border: 1px solid var(--ink); padding: 6px 10px 8px; min-width: 76px; box-shadow: 2px 2px 0 rgba(0,0,0,0.15); }
+  .parade-icon-wrap { position: relative; width: 48px; height: 48px; }
+  .parade-icon { width: 48px !important; height: 48px; image-rendering: pixelated; }
+  .parade-rank { position: absolute; bottom: -4px; right: -6px; width: 22px; height: 22px; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.5)); }
+  .parade-num { font-family: 'Special Elite', monospace; font-size: 18px; color: var(--red); margin-top: 2px; }
+  .parade-placed { font-family: 'VT323', monospace; font-size: 12px; color: var(--green); letter-spacing: 1px; }
+
+  /* ---------- Map placement ---------- */
+  .map-place { display: flex; flex-direction: column; gap: 14px; }
+  .map-place-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: rgba(40,25,10,0.06); border: 1px solid var(--ink-soft); padding: 10px 14px; }
+  .mp-instructions { font-family: 'VT323', monospace; font-size: 16px; letter-spacing: 1px; color: var(--ink); }
+  .mp-instructions strong { color: var(--red); font-family: 'Special Elite', monospace; letter-spacing: 2px; }
+  .mp-actions { display: flex; gap: 8px; }
+  .map-grid-wrap { display: grid; grid-template-columns: 1fr 200px; gap: 16px; align-items: start; }
+  .map-grid { background: rgba(40,25,10,0.18); border: 2px solid var(--ink); padding: 6px; display: flex; flex-direction: column; gap: 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3), 4px 4px 0 rgba(0,0,0,0.2); }
+  .mg-row { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; }
+  .mg-cell { aspect-ratio: 1 / 1; position: relative; border: 1px solid rgba(0,0,0,0.35); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); cursor: default; overflow: hidden; transition: filter .12s ease; }
+  .mg-P { background: #b6c97a; }
+  .mg-F { background: #4a7a3a; }
+  .mg-M { background: #8a8378; }
+  .mg-S { background: #6a6f3a; }
+  .mg-cell.deploy::before { content: ''; position: absolute; inset: 0; background: rgba(140, 200, 100, 0.18); box-shadow: inset 0 0 0 1px rgba(140,200,100,0.5); pointer-events: none; }
+  .mg-cell.targetable { cursor: pointer; }
+  .mg-cell.targetable:hover { filter: brightness(1.18); outline: 2px solid #f0e6cd; outline-offset: -2px; z-index: 2; }
+  .mg-cell.occupied { cursor: pointer; }
+  .mg-cell.occupied:hover { filter: brightness(0.85); outline: 2px solid var(--red); outline-offset: -2px; z-index: 2; }
+  .mg-coord { position: absolute; top: 1px; left: 2px; font-family: 'VT323', monospace; font-size: 9px; line-height: 1; color: rgba(0,0,0,0.45); pointer-events: none; }
+  .mg-unit { position: absolute; inset: 0; display: grid; place-items: center; }
+  .mg-unit-icon { width: 90% !important; height: 90%; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.6)); }
+  .mg-unit-rank { position: absolute; bottom: 0; right: 0; width: 40%; height: 40%; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.7)); }
+  .map-legend { background: rgba(255,248,222,0.65); border: 1px solid var(--ink); padding: 10px 12px; font-family: 'VT323', monospace; font-size: 15px; letter-spacing: 1px; color: var(--ink); display: flex; flex-direction: column; gap: 6px; box-shadow: 3px 3px 0 rgba(0,0,0,0.15); }
+  .ml-row { display: flex; align-items: center; gap: 8px; }
+  .ml-divider { height: 1px; background: rgba(40,25,10,0.4); margin: 4px 0; }
+  .deploy-sw { background: rgba(140,200,100,0.5) !important; border-color: rgba(60,120,40,0.8) !important; }
+
+  /* ---------- Palette ---------- */
+  .palette { background: rgba(255,248,222,0.6); border: 2px solid var(--ink); padding: 12px 14px; box-shadow: 4px 4px 0 rgba(0,0,0,0.15); }
+  .palette-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(40,25,10,0.4); padding-bottom: 6px; margin-bottom: 10px; }
+  .palette-title { font-family: 'Special Elite', monospace; letter-spacing: 4px; font-size: 14px; color: var(--ink); }
+  .palette-count { font-family: 'VT323', monospace; font-size: 15px; color: var(--ink-soft); letter-spacing: 1px; }
+  .palette-body { display: flex; flex-wrap: wrap; gap: 10px; }
+  .palette-empty { font-family: 'VT323', monospace; color: var(--ink-soft); padding: 6px; }
+  .palette-chip { appearance: none; border: 2px solid var(--ink); background: var(--paper); cursor: pointer; font-family: inherit; padding: 8px 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 92px; box-shadow: 2px 2px 0 rgba(0,0,0,0.2); transition: transform .12s ease; }
+  .palette-chip:hover { transform: translateY(-1px); background: var(--paper-2); }
+  .palette-chip.picked { background: #fff2c2; border-color: var(--red); box-shadow: 0 0 0 2px var(--red), 2px 2px 0 rgba(0,0,0,0.2); transform: rotate(-1deg); }
+  .palette-chip-icon-wrap { position: relative; width: 56px; height: 56px; }
+  .palette-chip-icon { width: 56px !important; height: 56px; image-rendering: pixelated; }
+  .palette-chip-rank { position: absolute; bottom: -2px; right: -4px; width: 24px; height: 24px; image-rendering: pixelated; filter: drop-shadow(1px 1px 0 rgba(0,0,0,0.5)); }
+  .palette-chip-name { font-family: 'Special Elite', monospace; font-size: 12px; letter-spacing: 1.5px; color: var(--ink); }
+  .palette-chip-num { font-family: 'VT323', monospace; font-size: 16px; color: var(--red); letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef } = React;
+
+// =====================================================================
+// DATA
+// =====================================================================
+
+const DOCTRINES = {
+  blitzkrieg: {
+    id: 'blitzkrieg',
+    name: 'Blitzkrieg',
+    nameAlt: 'Villámháború',
+    icon: '../../assets/game-icons/blitzkrieg.png',
+    chroma: null,
+    budget: 25,
+    free: { tank: 6, motorized: 4, infantry: 4 },
+    freeFixed: true,
+    buyCaps: { heavy: 0, infantry: 4, cavalry: 2, special: 2 },
+    xpCaps:  { infantry: 2, cavalry: 0, heavy: 1, special: 0 },
+    xpMaxLevel: 3,
+    sigTitle: 'Tanks must keep moving',
+    sigBody: 'Blitzkrieg tank: 4 ortho / 0 diag. Each still turn = −1 cumulative defence (resets on movement).',
+    accent: '#9d2a2a',
+  },
+  superior: {
+    id: 'superior',
+    name: 'Superior Firepower',
+    nameAlt: 'Tűzfölény',
+    icon: '../../assets/game-icons/superior_firepower.png',
+    chroma: 'green',
+    budget: 35,
+    free: { artillery: 6, cavalry: 4, infantry: 4 },
+    freeFixed: true,
+    buyCaps: { heavy: 2, infantry: 2, cavalry: 2, special: 2 },
+    xpCaps:  { infantry: 3, cavalry: 3, heavy: 0, special: 1 },
+    xpMaxLevel: 3,
+    sigTitle: 'Range and volume of fire',
+    sigBody: 'Artillery max range 12, −0.5 str past sq. 8. SF tanks 2 ortho / 1 diag with no still-penalty.',
+    accent: '#7a5a1f',
+  },
+  plain: {
+    id: 'plain',
+    name: 'Plain',
+    nameAlt: 'No specialization',
+    icon: '../../assets/game-icons/plain.png',
+    chroma: 'green',
+    budget: 30,
+    free: null,
+    freeFixed: false,
+    freeCap: 14,
+    freePerClass: 5,
+    buyCaps: { heavy: 5, infantry: 5, cavalry: 5, special: 5 },
+    xpCaps:  { infantry: 5, cavalry: 5, heavy: 5, special: 5 },
+    xpMaxLevel: 2,
+    sigTitle: 'Vanilla — no specialization',
+    sigBody: 'Plain tank: 2 ortho / 0 diag. No signature rule. Compose your own 14-unit starting army (≤5 per class).',
+    accent: '#3a5a2a',
+  },
+};
+
+const UNITS = {
+  infantry:  { key: 'infantry',  name: 'Infantry',  cls: 'infantry', cost: 3, hp: 4, mv: '2/1', rch: '1',   str: 1,   def: 0,   icon: '../../assets/game-icons/infantry.png',  chroma: 'green' },
+  cavalry:   { key: 'cavalry',   name: 'Cavalry',   cls: 'cavalry',  cost: 3, hp: 3, mv: '2/2', rch: '2',   str: 0.5, def: 1,   icon: '../../assets/game-icons/cavalry.png',   chroma: 'green' },
+  tank:      { key: 'tank',      name: 'Tanks',     cls: 'heavy',    cost: 5, hp: 8, mv: '3/0', rch: '4/3', str: 3,   def: 3,   icon: '../../assets/game-icons/tank.png',      chroma: 'green' },
+  motorized: { key: 'motorized', name: 'Motorized', cls: 'heavy',    cost: 5, hp: 6, mv: '3/2', rch: '3',   str: 2,   def: 1,   icon: '../../assets/game-icons/motorized.png', chroma: 'green' },
+  artillery: { key: 'artillery', name: 'Artillery', cls: 'special',  cost: 5, hp: 2, mv: '1/1', rch: '6',   str: 3,   def: 0.5, icon: '../../assets/game-icons/artillery.png', chroma: 'green' },
+};
+const UNIT_ORDER = ['infantry', 'cavalry', 'tank', 'motorized', 'artillery'];
+
+const RANKS = [
+  { lvl: 0, name: '—',       cumCost: 0,  icon: null },
+  { lvl: 1, name: 'Corporal', cumCost: 2,  icon: '../../assets/game-icons/rank_corporal.png' },
+  { lvl: 2, name: 'Captain',  cumCost: 6,  icon: '../../assets/game-icons/rank_captain.png'  },
+  { lvl: 3, name: 'Colonel',  cumCost: 11, icon: '../../assets/game-icons/rank_colonel.png'  },
+];
+
+const MAP_COORDS = [
+  ['P','P','P','P','P','P','P','F','M','P','M'],
+  ['P','P','M','P','P','P','P','F','M','M','M'],
+  ['P','P','P','M','M','P','P','S','S','P','P'],
+  ['P','F','F','M','M','M','P','S','S','P','P'],
+  ['P','P','F','F','P','P','P','P','P','S','S'],
+  ['F','F','F','P','P','P','M','M','P','P','P'],
+  ['F','F','P','P','P','F','M','M','M','P','P'],
+  ['P','P','P','F','P','F','F','M','M','M','P'],
+  ['P','P','P','P','P','F','F','F','F','M','M'],
+  ['P','P','P','P','P','F','F','F','F','F','F'],
+  ['P','P','P','S','S','P','P','S','P','F','F'],
+  ['P','P','P','S','P','S','S','P','P','P','P'],
+];
+const BIOMES = {
+  P: { name: 'Grass plain', color: '#9bbf6a' },
+  F: { name: 'Forest',      color: '#3f6f3a' },
+  M: { name: 'Mountain',    color: '#8a8378' },
+  S: { name: 'Swamp',       color: '#6a6a3a' },
+};
+
+const SUBTABS = [
+  { id: 'roster',  label: 'ROSTER',  icon: '../../assets/game-icons/infantry.png',           chroma: 'green', tone: '#3a4a2a' },
+  { id: 'buy',     label: 'BUY',     icon: '../../assets/game-icons/war_point.png',          chroma: 'green', tone: '#7a5a1f' },
+  { id: 'xp',      label: 'XP',      icon: '../../assets/game-icons/rank_colonel.png',       chroma: null,    tone: '#5a3a1a' },
+  { id: 'bonuses', label: 'BONUSES', icon: '../../assets/game-icons/trench.png',             chroma: 'green', tone: '#3a4a3a' },
+  { id: 'map',     label: 'MAP',     icon: '../../assets/game-icons/cavalry.png',            chroma: 'green', tone: '#2a4a5a' },
+];
+
+// =====================================================================
+// UTILS
+// =====================================================================
+
+function R(path) {
+  if (!path) return path;
+  if (typeof window === 'undefined' || !window.__resources) return path;
+  const id = (path.split('/').pop() || '').replace(/\.[^.]+$/, '');
+  return window.__resources[id] || path;
+}
+
+const _chromaCache = {};
+function chromaKey(src, mode) {
+  src = R(src);
+  if (!mode) return Promise.resolve(src);
+  const cacheKey = src + mode;
+  if (_chromaCache[cacheKey]) return Promise.resolve(_chromaCache[cacheKey]);
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const W = img.naturalWidth, H = img.naturalHeight;
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      try {
+        const data = ctx.getImageData(0, 0, W, H);
+        const px = data.data;
+        // Auto-detect background colour from the 4 corners
+        let sR=0, sG=0, sB=0, cnt=0;
+        for (const [x,y] of [[0,0],[W-1,0],[0,H-1],[W-1,H-1]]) {
+          const i=(y*W+x)*4;
+          if (px[i+3]>0) { sR+=px[i]; sG+=px[i+1]; sB+=px[i+2]; cnt++; }
+        }
+        if (!cnt) { resolve(src); return; }
+        const bgR=sR/cnt, bgG=sG/cnt, bgB=sB/cnt, TOL=45;
+        function isClose(i) {
+          return px[i+3]>0 &&
+            Math.max(Math.abs(px[i]-bgR),Math.abs(px[i+1]-bgG),Math.abs(px[i+2]-bgB)) <= TOL;
+        }
+        // BFS flood fill from all 4 corners — only removes connected background
+        const hit = new Uint8Array(W*H);
+        const q = [];
+        function enq(x,y) {
+          if (x<0||x>=W||y<0||y>=H) return;
+          const n=y*W+x; if (hit[n]) return;
+          if (!isClose(n*4)) return;
+          hit[n]=1; q.push(n);
+        }
+        enq(0,0); enq(W-1,0); enq(0,H-1); enq(W-1,H-1);
+        for (let qi=0; qi<q.length; qi++) {
+          const n=q[qi], x=n%W, y=(n/W)|0;
+          px[n*4+3]=0;
+          enq(x+1,y); enq(x-1,y); enq(x,y+1); enq(x,y-1);
+        }
+        // Feather anti-aliased edge pixels
+        for (let n=0; n<W*H; n++) {
+          if (hit[n]||px[n*4+3]===0) continue;
+          const x=n%W, y=(n/W)|0;
+          if (!((x>0&&hit[n-1])||(x<W-1&&hit[n+1])||(y>0&&hit[n-W])||(y<H-1&&hit[n+W]))) continue;
+          const d=Math.max(Math.abs(px[n*4]-bgR),Math.abs(px[n*4+1]-bgG),Math.abs(px[n*4+2]-bgB));
+          if (d<TOL+25) px[n*4+3]=Math.round(px[n*4+3]*(d-TOL)/25);
+        }
+        ctx.putImageData(data, 0, 0);
+        const url = c.toDataURL('image/png');
+        _chromaCache[cacheKey] = url;
+        resolve(url);
+      } catch(e) { resolve(src); }
+    };
+    img.onerror = () => resolve(src);
+    img.src = src;
+  });
+}
+
+function useChroma(src, mode) {
+  const [url, setUrl] = useState(mode ? null : src);
+  useEffect(() => {
+    let alive = true;
+    chromaKey(src, mode).then(u => { if (alive) setUrl(u); });
+    return () => { alive = false; };
+  }, [src, mode]);
+  return url || src;
+}
+
+function ChromaImg({ src, mode, ...rest }) {
+  const url = useChroma(src, mode);
+  return <img src={url} {...rest} />;
+}
+
+function unitCost(key) { return UNITS[key].cost; }
+function xpCumCost(level) { return RANKS[level]?.cumCost || 0; }
+
+function sumByClass(bought) {
+  const sums = { heavy: 0, infantry: 0, cavalry: 0, special: 0 };
+  for (const k of UNIT_ORDER) {
+    const u = UNITS[k];
+    if (u.cls === 'heavy')    sums.heavy    += bought[k] || 0;
+    else if (u.cls === 'infantry') sums.infantry += bought[k] || 0;
+    else if (u.cls === 'cavalry')  sums.cavalry  += bought[k] || 0;
+    else                           sums.special  += bought[k] || 0;
+  }
+  return sums;
+}
+
+function computeSpent(setup, doctrine) {
+  let units = 0;
+  for (const k of UNIT_ORDER) units += (setup.bought[k] || 0) * UNITS[k].cost;
+  let xp = 0;
+  for (const k of UNIT_ORDER) {
+    for (const lvl of (setup.xp[k] || [])) xp += xpCumCost(lvl);
+  }
+  let bonus = 0;
+  if (!setup.disabled.bonuses) {
+    bonus += (setup.entrenched || 0) * 3;
+    bonus += (setup.formations || 0) * 5;
+  }
+  return { units, xp, bonus, total: units + xp + bonus };
+}
+
+// =====================================================================
+// COMPONENTS
+// =====================================================================
+
+function newSetup() {
+  return {
+    bought:    { infantry: 0, cavalry: 0, tank: 0, motorized: 0, artillery: 0 },
+    xp:        { infantry: [], cavalry: [], tank: [], motorized: [], artillery: [] },
+    entrenched: 0,
+    formations: 0,
+    plainFree: { infantry: 0, cavalry: 0, tank: 0, motorized: 0, artillery: 0 },
+    disabled:  { units: false, xp: false, bonuses: false, classes: {} },
+  };
+}
+
+function Stamp({ children, color = '#9d2a2a', rotate = -4, style }) {
+  return (
+    <span className="stamp" style={{ color, borderColor: color, transform: `rotate(${rotate}deg)`, ...style }}>{children}</span>
+  );
+}
+
+function RedX({ on, onClick, title = 'Reject / turn off' }) {
+  return (
+    <button className={`red-x ${on ? 'on' : ''}`} onClick={onClick} title={title} aria-label={title}>&#x2715;</button>
+  );
+}
+
+function Stepper({ value, min = 0, max = 99, onChange, disabled }) {
+  return (
+    <div className={`stepper ${disabled ? 'dis' : ''}`}>
+      <button onClick={() => !disabled && onChange(Math.max(min, value - 1))} disabled={disabled || value <= min}>&#x2212;</button>
+      <span className="stepper-val">{value}</span>
+      <button onClick={() => !disabled && onChange(Math.min(max, value + 1))} disabled={disabled || value >= max}>+</button>
+    </div>
+  );
+}
+
+function FolderEar({ tab, active, onClick }) {
+  return (
+    <button className={`ear ${active ? 'active' : ''}`} onClick={onClick}>
+      <div className="ear-inner">
+        {tab.icon && <ChromaImg src={tab.icon} mode={tab.chroma} className="ear-icon" alt="" />}
+        <div className="ear-label">{tab.label}</div>
+      </div>
+    </button>
+  );
+}
+
+function WarPointsHUD({ doctrine, spent }) {
+  const left = doctrine.budget - spent.total;
+  const over = left < 0;
+  return (
+    <div className={`wp-hud ${over ? 'over' : ''}`}>
+      <ChromaImg src="../../assets/game-icons/war_point.png" mode="green" className="wp-icon" alt="war points" />
+      <div className="wp-num">
+        <div className="wp-big">{left}<span className="wp-of"> / {doctrine.budget}</span></div>
+        <div className="wp-cap">War Points</div>
+      </div>
+    </div>
+  );
+}
+
+function UnitBuyRow({ unitKey, count, onCount, capRemaining, disabled, freeCount }) {
+  const u = UNITS[unitKey];
+  return (
+    <div className={`unit-row ${disabled ? 'dis' : ''}`}>
+      <div className="unit-icon-wrap">
+        <ChromaImg src={u.icon} mode={u.chroma} className="unit-icon" alt={u.name} />
+      </div>
+      <div className="unit-meta">
+        <div className="unit-name">{u.name}</div>
+        <div className="unit-stats">HP {u.hp} · STR {u.str} · DEF {u.def} · MV {u.mv} · RCH {u.rch}</div>
+        <div className="unit-cost"><span className="dot" /> <b>{u.cost} WP</b> each · cap {capRemaining + count}</div>
+      </div>
+      <div className="unit-actions">
+        <div className="free-tag">FREE: {freeCount ?? 0}</div>
+        <Stepper value={count} max={capRemaining + count} onChange={onCount} disabled={disabled} />
+      </div>
+    </div>
+  );
+}
+
+function XPRow({ classKey, slots, slotCap, maxLevel, onChange, disabled }) {
+  const label = classKey === 'heavy' ? 'Heavy (Tank/Mot.)' : classKey === 'infantry' ? 'Infantry' : classKey === 'cavalry' ? 'Cavalry' : 'Artillery';
+  const totalCost = slots.reduce((s, l) => s + xpCumCost(l), 0);
+
+  function setSlot(i, lvl) {
+    const next = slots.slice(); next[i] = lvl;
+    onChange(next.filter(x => x > 0));
+  }
+  function addSlot() { if (slots.length < slotCap) onChange([...slots, 1]); }
+  function rmSlot(i) { const next = slots.slice(); next.splice(i, 1); onChange(next); }
+
+  return (
+    <div className={`xp-row ${disabled ? 'dis' : ''}`}>
+      <div className="xp-row-head">
+        <span>{label}</span>
+        <span className="xp-cap">{slots.length}/{slotCap} units · {totalCost} WP</span>
+      </div>
+      {slotCap === 0 && <div className="xp-locked">— locked by doctrine —</div>}
+      {slotCap > 0 && (
+        <div className="xp-slots">
+          {slots.map((lvl, i) => (
+            <div key={i} className="xp-slot">
+              {RANKS[lvl].icon && <img src={R(RANKS[lvl].icon)} className="rank-img" alt={RANKS[lvl].name} />}
+              <div>
+                <div className="rank-name">{RANKS[lvl].name}</div>
+                <div className="rank-cost">{RANKS[lvl].cumCost} WP</div>
+              </div>
+              <div className="rank-controls">
+                <button disabled={disabled || lvl <= 1} onClick={() => setSlot(i, lvl - 1)}>&#x2212;</button>
+                <span className="rank-lvl">L{lvl}</span>
+                <button disabled={disabled || lvl >= maxLevel} onClick={() => setSlot(i, lvl + 1)}>+</button>
+                <button className="rank-rm" onClick={() => rmSlot(i)} disabled={disabled} title="Remove">&#x2715;</button>
+              </div>
+            </div>
+          ))}
+          {slots.length < slotCap && (
+            <button className="xp-add" onClick={addSlot} disabled={disabled}>+ add upgrade slot</button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// =====================================================================
+// EXTRAS (sub-tabs, parade, map placement)
+// =====================================================================
+
+function buildInstances(doctrine, setup) {
+  const isPlain = doctrine.id === 'plain';
+  const out = [];
+  const free = isPlain ? (setup.plainFree || {}) : (doctrine.free || {});
+  let counter = 0;
+  for (const k of UNIT_ORDER) {
+    const f = free[k] || 0;
+    for (let i = 0; i < f; i++) out.push({ id: 'f' + counter++, unitKey: k, source: 'free', rank: 0 });
+  }
+  if (!setup.disabled.units) {
+    for (const k of UNIT_ORDER) {
+      const b = setup.bought[k] || 0;
+      for (let i = 0; i < b; i++) out.push({ id: 'b' + counter++, unitKey: k, source: 'bought', rank: 0 });
+    }
+  }
+  if (!setup.disabled.xp) {
+    const classToKey = { infantry: 'infantry', cavalry: 'cavalry', heavy: 'tank', special: 'artillery' };
+    for (const cls of ['infantry', 'cavalry', 'heavy', 'special']) {
+      const principal = classToKey[cls];
+      const slots = setup.xp[principal] || [];
+      if (!slots.length) continue;
+      const sorted = [...slots].sort((a, b) => b - a);
+      const matching = out.filter(u => UNITS[u.unitKey].cls === cls && u.rank === 0);
+      sorted.forEach((lvl, i) => { if (matching[i]) matching[i].rank = lvl; });
+    }
+  }
+  return out;
+}
+
+const SUBTAB_HINTS = {
+  roster:  'Review the free units this doctrine grants you.',
+  buy:     'Spend War Points on extra units, within class caps.',
+  xp:      'Promote select units so they spawn at a higher rank.',
+  bonuses: 'Optional perks: spawn entrenched or in pairs.',
+  map:     'Drop each unit onto your deploy zone (rows 9–12).',
+};
+
+function SubFolderTabs({ active, onChange }) {
+  const idx = SUBTABS.findIndex(t => t.id === active);
+  return (
+    <div className="subnav">
+      <div className="subnav-step">
+        STEP <b>{idx + 1}</b> / {SUBTABS.length} &middot; <span className="subnav-hint">{SUBTAB_HINTS[active]}</span>
+      </div>
+      <div className="subear-row">
+        {SUBTABS.map((t, i) => (
+          <button key={t.id} className={`subear ${active === t.id ? 'active' : ''}`} onClick={() => onChange(t.id)}>
+            <span className="subear-num">{i + 1}</span>
+            <ChromaImg src={t.icon} mode={t.chroma} className="subear-icon" alt="" />
+            <div className="subear-label">{t.label}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ArmyParade({ instances, placements }) {
+  const placedSet = new Set(placements.map(p => p.id));
+  const groups = {};
+  for (const u of instances) {
+    const key = u.unitKey + '|' + u.rank;
+    if (!groups[key]) groups[key] = { unitKey: u.unitKey, rank: u.rank, total: 0, placed: 0 };
+    groups[key].total++;
+    if (placedSet.has(u.id)) groups[key].placed++;
+  }
+  const arr = Object.values(groups).sort((a, b) =>
+    UNIT_ORDER.indexOf(a.unitKey) - UNIT_ORDER.indexOf(b.unitKey) || b.rank - a.rank
+  );
+  return (
+    <div className="parade">
+      <div className="parade-head">
+        <span className="parade-title">PARADE — your forces</span>
+        <span className="parade-count">{instances.length} units · {placements.length} placed</span>
+      </div>
+      <div className="parade-body">
+        {arr.length === 0 && <div className="parade-empty">— no units yet —</div>}
+        {arr.map((g, i) => (
+          <div key={i} className="parade-pip" title={`${UNITS[g.unitKey].name}${g.rank ? ' · ' + RANKS[g.rank].name : ''}`}>
+            <div className="parade-icon-wrap">
+              <ChromaImg src={UNITS[g.unitKey].icon} mode={UNITS[g.unitKey].chroma} className="parade-icon" alt="" />
+              {g.rank > 0 && <img src={R(RANKS[g.rank].icon)} className="parade-rank" alt="" />}
+            </div>
+            <div className="parade-num">×{g.total}</div>
+            {g.placed > 0 && <div className="parade-placed">{g.placed}/{g.total} on map</div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MapPlacement({ doctrine, setup, setSetup, instances }) {
+  const placements = setup.placements || [];
+  const placedSet = new Set(placements.map(p => p.id));
+  const placedByCell = {};
+  for (const p of placements) placedByCell[p.row + ',' + p.col] = p;
+
+  const available = instances.filter(u => !placedSet.has(u.id));
+  const groups = {};
+  for (const u of available) {
+    const key = u.unitKey + '|' + u.rank;
+    if (!groups[key]) groups[key] = { unitKey: u.unitKey, rank: u.rank, ids: [] };
+    groups[key].ids.push(u.id);
+  }
+  const palette = Object.values(groups).sort((a, b) =>
+    UNIT_ORDER.indexOf(a.unitKey) - UNIT_ORDER.indexOf(b.unitKey) || b.rank - a.rank
+  );
+
+  const [picked, setPicked] = useState(null);
+
+  function placeAt(row, col) {
+    if (!picked) return;
+    if (placedByCell[row + ',' + col]) return;
+    const grp = groups[picked.unitKey + '|' + picked.rank];
+    if (!grp || !grp.ids.length) return;
+    const id = grp.ids[0];
+    const next = [...placements, { id, unitKey: picked.unitKey, rank: picked.rank, row, col }];
+    setSetup(s => ({ ...s, placements: next }));
+    if (grp.ids.length <= 1) setPicked(null);
+  }
+  function removeAt(row, col) {
+    setSetup(s => ({ ...s, placements: placements.filter(p => !(p.row === row && p.col === col)) }));
+  }
+  function clearAll() { setSetup(s => ({ ...s, placements: [] })); }
+  function autoPlace() {
+    const next = [...placements];
+    const taken = new Set(next.map(p => p.row + ',' + p.col));
+    const remaining = instances.filter(u => !placedSet.has(u.id));
+    const rows = [12, 11, 10, 9];
+    let idx = 0;
+    outer:
+    for (const u of remaining) {
+      while (idx < rows.length * 11) {
+        const r = rows[Math.floor(idx / 11)];
+        const c = (idx % 11) + 1;
+        idx++;
+        const key = r + ',' + c;
+        if (!taken.has(key)) {
+          taken.add(key);
+          next.push({ id: u.id, unitKey: u.unitKey, rank: u.rank, row: r, col: c });
+          continue outer;
+        }
+      }
+      break;
+    }
+    setSetup(s => ({ ...s, placements: next }));
+  }
+
+  return (
+    <div className="map-place">
+      <div className="map-place-head">
+        <div className="mp-instructions">
+          <strong>1.</strong> pick a unit chip below &nbsp;·&nbsp; <strong>2.</strong> click a green deploy tile to place &nbsp;·&nbsp; <strong>3.</strong> click a placed unit to remove
+        </div>
+        <div className="mp-actions">
+          <button className="btn" onClick={autoPlace} disabled={available.length === 0}>Auto-deploy back rows</button>
+          <button className="btn" onClick={clearAll} disabled={placements.length === 0}>Clear map</button>
+        </div>
+      </div>
+
+      <div className="map-grid-wrap">
+        <div className="map-grid">
+          {MAP_COORDS.map((row, r) => (
+            <div key={r} className="mg-row">
+              {row.map((b, c) => {
+                const rr = r + 1, cc = c + 1;
+                const placed = placedByCell[rr + ',' + cc];
+                const isDeploy = rr >= 9;
+                return (
+                  <div
+                    key={c}
+                    className={`mg-cell mg-${b} ${isDeploy ? 'deploy' : ''} ${placed ? 'occupied' : ''} ${picked && isDeploy && !placed ? 'targetable' : ''}`}
+                    onClick={() => placed ? removeAt(rr, cc) : (isDeploy && placeAt(rr, cc))}
+                    title={`${rr},${cc} · ${BIOMES[b].name}${placed ? ' · ' + UNITS[placed.unitKey].name : ''}`}
+                  >
+                    <span className="mg-coord">{rr},{cc}</span>
+                    {placed && (
+                      <div className="mg-unit">
+                        <ChromaImg src={UNITS[placed.unitKey].icon} mode={UNITS[placed.unitKey].chroma} className="mg-unit-icon" alt="" />
+                        {placed.rank > 0 && <img src={R(RANKS[placed.rank].icon)} className="mg-unit-rank" alt="" />}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="map-legend">
+          <div className="ml-row"><span className="sw mm-P" /> P · Grass plain</div>
+          <div className="ml-row"><span className="sw mm-F" /> F · Forest</div>
+          <div className="ml-row"><span className="sw mm-M" /> M · Mountain</div>
+          <div className="ml-row"><span className="sw mm-S" /> S · Swamp</div>
+          <div className="ml-divider" />
+          <div className="ml-row"><span className="sw deploy-sw" /> Deploy zone (rows 9–12)</div>
+        </div>
+      </div>
+
+      <div className="palette">
+        <div className="palette-head">
+          <span className="palette-title">UNITS TO DEPLOY</span>
+          <span className="palette-count">{available.length} remaining</span>
+        </div>
+        <div className="palette-body">
+          {palette.length === 0 && <div className="palette-empty">all units placed.</div>}
+          {palette.map((g, i) => {
+            const isPicked = picked && picked.unitKey === g.unitKey && picked.rank === g.rank;
+            return (
+              <button
+                key={i}
+                className={`palette-chip ${isPicked ? 'picked' : ''}`}
+                onClick={() => setPicked(isPicked ? null : { unitKey: g.unitKey, rank: g.rank })}>
+                <div className="palette-chip-icon-wrap">
+                  <ChromaImg src={UNITS[g.unitKey].icon} mode={UNITS[g.unitKey].chroma} className="palette-chip-icon" alt="" />
+                  {g.rank > 0 && <img src={R(RANKS[g.rank].icon)} className="palette-chip-rank" alt="" />}
+                </div>
+                <div className="palette-chip-name">{UNITS[g.unitKey].name}{g.rank > 0 ? ` L${g.rank}` : ''}</div>
+                <div className="palette-chip-num">×{g.ids.length}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================================
+// APP (sub-pages + root)
+// =====================================================================
+
+function PlainComposeRow({ unitKey, count, max, total, cap, onChange }) {
+  const u = UNITS[unitKey];
+  return (
+    <div className="unit-row">
+      <div className="unit-icon-wrap">
+        <ChromaImg src={u.icon} mode={u.chroma} className="unit-icon" alt={u.name} />
+      </div>
+      <div className="unit-meta">
+        <div className="unit-name">{u.name}</div>
+        <div className="unit-stats">HP {u.hp} · STR {u.str} · DEF {u.def} · MV {u.mv} · RCH {u.rch}</div>
+        <div className="unit-cost"><span className="dot" /> FREE — counts toward {cap} total · ≤ {max}/class</div>
+      </div>
+      <div className="unit-actions">
+        <Stepper value={count} max={max} onChange={(v) => {
+          const delta = v - count;
+          if (total + delta > cap && delta > 0) return;
+          onChange(v);
+        }} />
+      </div>
+    </div>
+  );
+}
+
+function RosterSubPage({ doctrine, setup, setSetup }) {
+  const isPlain = doctrine.id === 'plain';
+  const plainTotal = isPlain ? UNIT_ORDER.reduce((s, k) => s + (setup.plainFree[k] || 0), 0) : 0;
+  function setPlainFree(k, v) {
+    setSetup(s => ({ ...s, plainFree: { ...s.plainFree, [k]: v } }));
+  }
+  return (
+    <section className="card sub-card">
+      <div className="card-head">
+        <h3>Starting Army <span className="muted">(free)</span></h3>
+        <span className="card-hint">
+          {doctrine.freeFixed ? '14 units, fixed by doctrine' : `compose up to ${doctrine.freeCap}, ≤ ${doctrine.freePerClass}/class`}
+        </span>
+      </div>
+      {doctrine.freeFixed && (
+        <div className="free-roster lg">
+          {Object.entries(doctrine.free).map(([k, n]) => (
+            <div key={k} className="free-pip lg">
+              <ChromaImg src={UNITS[k].icon} mode={UNITS[k].chroma} className="pip-icon lg" alt={UNITS[k].name} />
+              <div>
+                <div className="pip-name">{UNITS[k].name}</div>
+                <div className="pip-count">×{n}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {!doctrine.freeFixed && (
+        <div>
+          <div className="plain-tally">
+            <span>{plainTotal}</span> / {doctrine.freeCap}
+            {plainTotal !== doctrine.freeCap && <span className="warn"> — not yet 14</span>}
+          </div>
+          {UNIT_ORDER.map(k => (
+            <PlainComposeRow
+              key={k} unitKey={k}
+              count={setup.plainFree[k] || 0}
+              max={doctrine.freePerClass}
+              total={plainTotal}
+              cap={doctrine.freeCap}
+              onChange={(v) => setPlainFree(k, v)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BuySubPage({ doctrine, setup, setSetup }) {
+  const isPlain = doctrine.id === 'plain';
+  const sums = sumByClass(setup.bought);
+  function setBought(k, v) { setSetup(s => ({ ...s, bought: { ...s.bought, [k]: v } })); }
+  function toggleDisabled(key) { setSetup(s => ({ ...s, disabled: { ...s.disabled, [key]: !s.disabled[key] } })); }
+  function capRemaining(unitKey) {
+    const cls = UNITS[unitKey].cls;
+    return Math.max(0, (doctrine.buyCaps[cls] ?? 0) - sums[cls]);
+  }
+  return (
+    <section className="card sub-card">
+      <div className="card-head">
+        <h3>Buy Additional Units</h3>
+        <div className="card-controls">
+          <span className="card-hint">spend WP · doctrine caps apply</span>
+          <RedX on={setup.disabled.units} onClick={() => toggleDisabled('units')} title="Reject the unit-buy system" />
+        </div>
+      </div>
+      {setup.disabled.units && <div className="reject-banner">Function rejected — turned off</div>}
+      <div className="cap-bar">
+        <span>HEAVY {sums.heavy}/{doctrine.buyCaps.heavy}</span>
+        <span>INF {sums.infantry}/{doctrine.buyCaps.infantry}</span>
+        <span>CAV {sums.cavalry}/{doctrine.buyCaps.cavalry}</span>
+        <span>SPC {sums.special}/{doctrine.buyCaps.special}</span>
+      </div>
+      {UNIT_ORDER.map(k => (
+        <UnitBuyRow
+          key={k} unitKey={k}
+          count={setup.bought[k] || 0}
+          onCount={(v) => setBought(k, v)}
+          capRemaining={capRemaining(k)}
+          disabled={setup.disabled.units}
+          freeCount={isPlain ? (setup.plainFree[k] || 0) : (doctrine.free?.[k] || 0)}
+        />
+      ))}
+    </section>
+  );
+}
+
+function XPSubPage({ doctrine, setup, setSetup }) {
+  function setXP(k, list) { setSetup(s => ({ ...s, xp: { ...s.xp, [k]: list } })); }
+  function toggleDisabled(key) { setSetup(s => ({ ...s, disabled: { ...s.disabled, [key]: !s.disabled[key] } })); }
+  return (
+    <section className="card sub-card">
+      <div className="card-head">
+        <h3>Experience <span className="muted">(spawn at higher rank)</span></h3>
+        <div className="card-controls">
+          <span className="card-hint">L1=2 · L2=6 · L3=11 cumulative WP. Max L{doctrine.xpMaxLevel}.</span>
+          <RedX on={setup.disabled.xp} onClick={() => toggleDisabled('xp')} title="Reject the XP system" />
+        </div>
+      </div>
+      {setup.disabled.xp && <div className="reject-banner">Function rejected — turned off</div>}
+      {['infantry','cavalry','heavy','special'].map(cls => {
+        const unitKey = cls === 'infantry' ? 'infantry' : cls === 'cavalry' ? 'cavalry' : cls === 'heavy' ? 'tank' : 'artillery';
+        return (
+          <XPRow
+            key={cls} classKey={cls}
+            slots={setup.xp[unitKey] || []}
+            slotCap={doctrine.xpCaps[cls] ?? 0}
+            maxLevel={doctrine.xpMaxLevel}
+            onChange={(list) => setXP(unitKey, list)}
+            disabled={setup.disabled.xp}
+          />
+        );
+      })}
+    </section>
+  );
+}
+
+function BonusesSubPage({ doctrine, setup, setSetup }) {
+  function toggleDisabled(key) { setSetup(s => ({ ...s, disabled: { ...s.disabled, [key]: !s.disabled[key] } })); }
+  return (
+    <section className="card sub-card">
+      <div className="card-head">
+        <h3>Spawn-State Bonuses</h3>
+        <div className="card-controls">
+          <span className="card-hint">applied at deployment</span>
+          <RedX on={setup.disabled.bonuses} onClick={() => toggleDisabled('bonuses')} title="Reject spawn bonuses" />
+        </div>
+      </div>
+      {setup.disabled.bonuses && <div className="reject-banner">Function rejected — turned off</div>}
+      <div className={`bonus-row ${setup.disabled.bonuses ? 'dis' : ''}`}>
+        <ChromaImg src="../../assets/game-icons/trench.png" mode="green" className="bonus-icon" alt="trench" />
+        <div>
+          <div className="bonus-name">Spawn Entrenched</div>
+          <div className="bonus-desc">3 WP each · light units only · skips the 3-turn dig-in timer</div>
+        </div>
+        <Stepper value={setup.entrenched} max={20} onChange={(v) => setSetup(s => ({ ...s, entrenched: v }))} disabled={setup.disabled.bonuses} />
+      </div>
+      <div className={`bonus-row ${setup.disabled.bonuses ? 'dis' : ''}`}>
+        <ChromaImg src="../../assets/game-icons/formation.png" mode="green" className="bonus-icon" alt="formation" />
+        <div>
+          <div className="bonus-name">Spawn in Formation <span className="muted">(pairs)</span></div>
+          <div className="bonus-desc">5 WP per pair · two light units stacked · immune to double-attack</div>
+        </div>
+        <Stepper value={setup.formations} max={10} onChange={(v) => setSetup(s => ({ ...s, formations: v }))} disabled={setup.disabled.bonuses} />
+      </div>
+    </section>
+  );
+}
+
+function DoctrinePage({ doctrine, setup, setSetup, subtab, setSubtab }) {
+  const spent = computeSpent(setup, doctrine);
+  const instances = useMemo(() => buildInstances(doctrine, setup), [doctrine, setup]);
+  return (
+    <div className="page" data-doctrine={doctrine.id}>
+      <header className="page-head compact">
+        <div className="page-title-wrap">
+          <ChromaImg src={doctrine.icon} mode={doctrine.chroma} className="page-icon" alt="" />
+          <div>
+            <div className="kicker">DOCTRINE</div>
+            <h1 className="page-title">{doctrine.name}</h1>
+            <div className="page-sub">{doctrine.nameAlt}</div>
+          </div>
+        </div>
+        <WarPointsHUD doctrine={doctrine} spent={spent} />
+      </header>
+
+      {subtab === 'roster' && (
+        <div className="sig-card" style={{ borderColor: doctrine.accent }}>
+          <div className="sig-title">SIGNATURE — {doctrine.sigTitle}</div>
+          <div className="sig-body">{doctrine.sigBody}</div>
+        </div>
+      )}
+
+      <SubFolderTabs active={subtab} onChange={setSubtab} />
+
+      <div className="sub-paper">
+        {subtab === 'roster'  && <RosterSubPage  doctrine={doctrine} setup={setup} setSetup={setSetup} />}
+        {subtab === 'buy'     && <BuySubPage     doctrine={doctrine} setup={setup} setSetup={setSetup} />}
+        {subtab === 'xp'      && <XPSubPage      doctrine={doctrine} setup={setup} setSetup={setSetup} />}
+        {subtab === 'bonuses' && <BonusesSubPage doctrine={doctrine} setup={setup} setSetup={setSetup} />}
+        {subtab === 'map'     && <MapPlacement   doctrine={doctrine} setup={setup} setSetup={setSetup} instances={instances} />}
+      </div>
+
+      <ArmyParade instances={instances} placements={setup.placements || []} />
+    </div>
+  );
+}
+
+function generateMD(doctrineId, setup) {
+  const d = DOCTRINES[doctrineId];
+  const spent = computeSpent(setup, d);
+  const lines = [];
+  lines.push('# Pre-Game Briefing', '');
+  lines.push(`**Doctrine:** ${d.name} *(${d.nameAlt})*`);
+  lines.push(`**War-point budget:** ${d.budget}`);
+  lines.push(`**Spent:** ${spent.total} (units ${spent.units} · xp ${spent.xp} · bonuses ${spent.bonus})`);
+  lines.push(`**Remaining:** ${d.budget - spent.total}`, '');
+
+  lines.push('## Starting Army (free)');
+  if (d.freeFixed) {
+    for (const [k, n] of Object.entries(d.free)) lines.push(`- ${UNITS[k].name}: ×${n}`);
+  } else {
+    let total = 0;
+    for (const k of UNIT_ORDER) {
+      const n = setup.plainFree[k] || 0; total += n;
+      if (n > 0) lines.push(`- ${UNITS[k].name}: ×${n}`);
+    }
+    lines.push(`- **Total:** ${total}/${d.freeCap}`);
+  }
+  lines.push('');
+
+  lines.push('## Bought Units');
+  if (setup.disabled.units) {
+    lines.push('- *turned off*');
+  } else {
+    let any = false;
+    for (const k of UNIT_ORDER) {
+      const n = setup.bought[k] || 0;
+      if (n > 0) { lines.push(`- ${UNITS[k].name}: ×${n}  (${n * UNITS[k].cost} WP)`); any = true; }
+    }
+    if (!any) lines.push('- *(none)*');
+  }
+  lines.push('');
+
+  lines.push('## Experience Upgrades');
+  if (setup.disabled.xp) {
+    lines.push('- *turned off*');
+  } else {
+    let any = false;
+    for (const cls of ['infantry','cavalry','heavy','special']) {
+      const k = cls === 'infantry' ? 'infantry' : cls === 'cavalry' ? 'cavalry' : cls === 'heavy' ? 'tank' : 'artillery';
+      const list = setup.xp[k] || [];
+      if (!list.length) continue;
+      any = true;
+      const counts = list.reduce((m, l) => (m[l] = (m[l]||0)+1, m), {});
+      const parts = Object.entries(counts).map(([l, c]) => `${c}× L${l} (${RANKS[l].name})`).join(', ');
+      lines.push(`- ${cls.toUpperCase()}: ${parts}`);
+    }
+    if (!any) lines.push('- *(none)*');
+  }
+  lines.push('');
+
+  lines.push('## Spawn-State Bonuses');
+  if (setup.disabled.bonuses) {
+    lines.push('- *turned off*');
+  } else {
+    if (setup.entrenched > 0) lines.push(`- Spawn entrenched: ×${setup.entrenched}  (${setup.entrenched * 3} WP)`);
+    if (setup.formations > 0) lines.push(`- Spawn in formation: ×${setup.formations} pair(s)  (${setup.formations * 5} WP)`);
+    if (setup.entrenched === 0 && setup.formations === 0) lines.push('- *(none)*');
+  }
+  lines.push('');
+
+  lines.push('## Deployed Positions');
+  const placements = setup.placements || [];
+  if (placements.length === 0) {
+    lines.push('- *(no units placed yet — see MAP folder)*');
+  } else {
+    const byUnit = {};
+    for (const p of placements) {
+      const key = p.unitKey + (p.rank ? '|L' + p.rank : '');
+      if (!byUnit[key]) byUnit[key] = [];
+      byUnit[key].push(`${p.row},${p.col}`);
+    }
+    for (const k of Object.keys(byUnit).sort()) {
+      const [unitKey, rankStr] = k.split('|');
+      const name = UNITS[unitKey].name + (rankStr ? ' ' + rankStr : '');
+      lines.push(`- ${name}: ${byUnit[k].join(' · ')}`);
+    }
+  }
+  lines.push('');
+
+  lines.push('## Map Coordinates', '');
+  lines.push('**Key:** `row,col=biome` · **P** = Grass plain · **F** = Forest · **M** = Mountain · **S** = Swamp', '');
+  for (let r = 0; r < MAP_COORDS.length; r += 4) {
+    const chunk = MAP_COORDS.slice(r, r + 4);
+    lines.push(`**Rows ${r+1}–${Math.min(r+4, MAP_COORDS.length)}**`);
+    chunk.forEach((row, ri) => {
+      const y = r + ri + 1;
+      lines.push(`- ${row.map((b, ci) => `${y},${ci+1}=${b}`).join('; ')}`);
+    });
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+function MiniMap({ placements }) {
+  const placedByCell = {};
+  for (const p of (placements || [])) placedByCell[p.row + ',' + p.col] = p;
+  return (
+    <div className="mini-map">
+      {MAP_COORDS.map((row, r) => (
+        <div key={r} className="mm-row">
+          {row.map((b, c) => {
+            const p = placedByCell[(r+1) + ',' + (c+1)];
+            return (
+              <div key={c} className={`mm-cell mm-${b}`} title={`${r+1},${c+1} ${BIOMES[b].name}${p ? ' · ' + UNITS[p.unitKey].name : ''}`}>
+                {p
+                  ? <ChromaImg src={UNITS[p.unitKey].icon} mode={UNITS[p.unitKey].chroma} className="mm-unit" alt="" />
+                  : b}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BriefingPage({ doctrineId, setup }) {
+  const md = useMemo(() => generateMD(doctrineId, setup), [doctrineId, setup]);
+  const [copied, setCopied] = useState(false);
+  const twpPhase = localStorage.getItem('twp_setup_phase');
+  function copy() {
+    navigator.clipboard.writeText(md).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  }
+  function download() {
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'pregame-briefing.md';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+  function deploy() {
+    const phase = localStorage.getItem('twp_setup_phase');
+    if (phase === '1') {
+      localStorage.setItem('twp_p1_brief', md);
+      localStorage.setItem('twp_setup_phase', '2');
+      window.location.replace(window.location.pathname); // fresh load for P2
+    } else if (phase === '2') {
+      localStorage.setItem('twp_p2_brief', md);
+      localStorage.removeItem('twp_setup_phase');
+      localStorage.setItem('twp_both_ready', '1');
+      window.location.href = '../../core-map/index.html';
+    } else {
+      localStorage.setItem('pregame_briefing', md);
+      localStorage.setItem('twp_autostart', '1');
+      window.location.href = '../../core-map/index.html';
+    }
+  }
+  return (
+    <div className="page">
+      <header className="page-head">
+        <div className="page-title-wrap">
+          <div className="brief-stamp"><Stamp color="#9d2a2a">CLASSIFIED</Stamp></div>
+          <div>
+            <div className="kicker">FIELD ORDER — live briefing</div>
+            <h1 className="page-title">Information Output</h1>
+            <div className="page-sub">Auto-compiled from current setup state · format: markdown</div>
+          </div>
+        </div>
+        <div className="brief-actions">
+          <button className="btn" onClick={copy}>{copied ? '✓ copied' : 'Copy .md'}</button>
+          <button className="btn alt" onClick={download}>Download .md</button>
+          <button className="btn alt" onClick={deploy} style={{background:'#4a6b3a', borderColor:'#4a6b3a', letterSpacing:'3px'}}>
+            {twpPhase === '1' ? 'DONE — PLAYER 1 ▸' : twpPhase === '2' ? '▶ DEPLOY TO BATTLE' : '▶ Deploy to Game'}
+          </button>
+        </div>
+      </header>
+      <div className="brief-cols">
+        <div className="card">
+          <div className="card-head">
+            <h3>pregame-briefing.md</h3>
+            <span className="card-hint">updates as you tweak the other folders</span>
+          </div>
+          <pre className="md-pre">{md}</pre>
+        </div>
+        <div className="card">
+          <div className="card-head">
+            <h3>Map preview</h3>
+            <span className="card-hint">12×11 grid · placements shown</span>
+          </div>
+          <MiniMap placements={setup.placements || []} />
+          <div className="biome-legend">
+            <div><span className="sw mm-P" /> P · Grass plain</div>
+            <div><span className="sw mm-F" /> F · Forest</div>
+            <div><span className="sw mm-M" /> M · Mountain</div>
+            <div><span className="sw mm-S" /> S · Swamp</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [doctrineId, setDoctrineId] = useState('blitzkrieg');
+  const [setup, setSetup] = useState(() => ({ ...newSetup(), placements: [] }));
+  const [tab, setTab] = useState('blitzkrieg');
+  const [subtab, setSubtab] = useState('roster');
+  const twpPhase = localStorage.getItem('twp_setup_phase'); // '1', '2', or null
+
+  const tabs = [
+    { id: 'blitzkrieg', label: 'BLITZKRIEG',     icon: '../../assets/game-icons/blitzkrieg.png',          chroma: null    },
+    { id: 'superior',   label: 'SUP. FIREPOWER',  icon: '../../assets/game-icons/superior_firepower.png',  chroma: 'green' },
+    { id: 'plain',      label: 'PLAIN',            icon: '../../assets/game-icons/plain.png',               chroma: 'green' },
+    { id: 'briefing',   label: 'BRIEFING',         icon: null,                                chroma: null    },
+  ];
+
+  function pickDoctrine(id) {
+    setDoctrineId(id); setTab(id);
+    setSetup({ ...newSetup(), placements: [] });
+    setSubtab('roster');
+  }
+
+  return (
+    <div className="desk">
+      <div className="desk-bg" />
+      <div className="desk-vignette" />
+
+      {twpPhase && (
+        <div style={{
+          background: twpPhase === '1' ? '#2a3d6a' : '#3a2a5a',
+          color:'#f0e6cd', fontFamily:"'Special Elite', monospace",
+          fontSize:'13px', letterSpacing:'3px', textAlign:'center',
+          padding:'8px 0', borderBottom:'2px solid rgba(255,255,255,0.15)',
+        }}>
+          {twpPhase === '1' ? '⚔ PLAYER 1 — SET UP YOUR ARMY' : '⚔ PLAYER 2 — SET UP YOUR ARMY'}
+        </div>
+      )}
+
+      <div className="header-strip">
+        <div style={{display:'flex', alignItems:'center', gap:'18px'}}>
+          <button onClick={() => {
+            if (twpPhase) {
+              localStorage.removeItem('twp_setup_phase');
+              window.location.href = '../../core-map/index.html';
+            } else {
+              window.location.href = '../menu/Strategy Game Menu.html';
+            }
+          }} style={{
+            appearance:'none', border:'2px solid #f0e6cd', background:'transparent',
+            color:'#f0e6cd', fontFamily:"'Special Elite', monospace", fontSize:'14px',
+            letterSpacing:'2px', padding:'6px 12px', cursor:'pointer',
+            textShadow:'0 1px 4px rgba(0,0,0,0.6)', whiteSpace:'nowrap',
+          }}>← {twpPhase ? 'CANCEL' : 'MENU'}</button>
+          <div>
+            <div className="hs-title">PRE-GAME COMMAND DESK</div>
+            <div className="hs-sub">War-point allocation · Doctrine briefing · Field setup</div>
+          </div>
+        </div>
+        <div className="hs-right">
+          <Stamp color="#9d2a2a">SECTION 1</Stamp>
+          <div className="hs-page">page <b>1</b> / 4</div>
+        </div>
+      </div>
+
+      <div className="folder">
+        <div className="ear-row">
+          {tabs.map(t => (
+            <FolderEar
+              key={t.id} tab={t} active={tab === t.id}
+              onClick={() => t.id === 'briefing' ? setTab('briefing') : pickDoctrine(t.id)}
+            />
+          ))}
+        </div>
+        <div className="paper">
+          {tab === 'briefing'
+            ? <BriefingPage doctrineId={doctrineId} setup={setup} />
+            : <DoctrinePage doctrine={DOCTRINES[doctrineId]} setup={setup} setSetup={setSetup} subtab={subtab} setSubtab={setSubtab} />
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

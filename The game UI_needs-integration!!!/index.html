@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HQ // Core Map — Field Command Desk</title>
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ── Command bar (always visible) ── -->
+  <div id="load-bar">
+    <a href="../src/menu/Strategy%20Game%20Menu.html" id="back-btn">← BACK TO HQ</a>
+    <textarea id="paste-textarea" placeholder="// PASTE PRE-GAME BRIEFING CODE…"></textarea>
+    <button id="btn-load">LOAD</button>
+    <span id="parse-error"></span>
+  </div>
+
+  <!-- ── Stage holds either the empty desk or the field map ── -->
+  <div id="stage">
+
+    <!-- ─────────── EMPTY DESK VIEW ─────────── -->
+    <div id="desk-view">
+      <div class="desk-header">
+        <div>
+          <div class="desk-title">Field Command Desk</div>
+          <div class="desk-subtitle">06 JUN 1944 &middot; 04:00 hrs &middot; Map room empty</div>
+        </div>
+        <div class="desk-stamp">AWAITING ORDERS</div>
+      </div>
+
+      <p class="desk-prompt">
+        The map case is empty, Commander. <strong>Drop a sealed briefing onto the desk</strong>
+        and the tactical map will appear &mdash; or pick a routine below to keep yourself busy
+        until the courier arrives.
+      </p>
+
+      <div class="cmd-grid">
+
+        <!-- 1. Paste briefing (focus textarea) -->
+        <div class="cmd-card primary" data-action="paste">
+          <span class="cmd-key">F1</span>
+          <h4>▸ Load Briefing</h4>
+          <div class="cmd-desc">Drop a pre-game code into the slot at the top of the desk and the map unfolds.</div>
+          <span class="cmd-stat">PASTE &amp; LOAD</span>
+        </div>
+
+        <!-- 2. Demo / Sample briefing -->
+        <div class="cmd-card alert" data-action="demo">
+          <span class="cmd-key">F2</span>
+          <h4>▸ Demonstration Map</h4>
+          <div class="cmd-desc">Load a sealed practice briefing &mdash; Plain doctrine, 14 units, mixed terrain.</div>
+          <span class="cmd-stat">LOAD DEMO</span>
+        </div>
+
+        <!-- 3. Pre-game setup -->
+        <div class="cmd-card" data-action="setup">
+          <span class="cmd-key">F3</span>
+          <h4>▸ Pre-Game Setup</h4>
+          <div class="cmd-desc">Pick a doctrine, spend war-points, place your army on the half-board.</div>
+          <span class="cmd-stat">OPEN SETUP</span>
+        </div>
+
+        <!-- 4. Rules manual -->
+        <div class="cmd-card" data-action="rules">
+          <span class="cmd-key">F4</span>
+          <h4>▸ Rules Manual</h4>
+          <div class="cmd-desc">Consolidated v0.18 ruleset &mdash; combat, units, economy, doctrines.</div>
+          <span class="cmd-stat">CONSULT</span>
+        </div>
+
+        <!-- 5. Last briefing -->
+        <div class="cmd-card" data-action="last">
+          <span class="cmd-key">F5</span>
+          <h4>▸ Restore Last Map</h4>
+          <div class="cmd-desc">Re-open the briefing you most recently loaded (held in the field safe).</div>
+          <span class="cmd-stat" id="last-status">NONE ON FILE</span>
+        </div>
+
+        <!-- 6. Map builder -->
+        <div class="cmd-card" data-action="builder">
+          <span class="cmd-key">F6</span>
+          <h4>▸ Tactical Map Editor</h4>
+          <div class="cmd-desc">Place terrain, decorations and unit tokens before sealing the briefing.</div>
+          <span class="cmd-stat">OPEN BUILDER</span>
+        </div>
+
+      </div>
+
+      <div class="desk-dropzone">
+        <span><b>HINT.</b> Briefings arrive from the Pre-Game Setup screen automatically &mdash;
+          this desk reads the field safe (localStorage) on every load.</span>
+        <span class="blink">_</span>
+      </div>
+
+      <div class="desk-footer">
+        <span>// WEATHER: OVERCAST &middot; WIND SW 4 KTS</span>
+        <span>// SIG: STRONG <span class="blink">▮</span></span>
+      </div>
+    </div>
+
+    <!-- ─────────── FIELD MAP VIEW ─────────── -->
+    <div id="map-view">
+
+      <div class="field-map">
+        <div class="map-cap">
+          <h3 id="mc-title">Tactical Map &middot; SECTOR 06-N</h3>
+          <span class="map-coord" id="mc-coords">12×11 &middot; HCRAFT</span>
+        </div>
+
+        <div class="compass">
+          <span class="n">N</span>
+          <span class="s">S</span>
+          <span class="e">E</span>
+          <span class="w">W</span>
+        </div>
+
+        <div id="map-root"></div>
+
+        <div style="display:flex; justify-content:space-between; font-family:'VT323',monospace; font-size:13px; color:var(--olive); letter-spacing:1px; padding-top:6px; border-top:1px dashed var(--olive); margin-top:4px;">
+          <span id="mc-doctrine-sticker"></span>
+          <span><span class="blink">●</span> LIVE &middot; CLICK A UNIT TO SELECT</span>
+        </div>
+      </div>
+
+      <aside class="side-col">
+        <section class="overview">
+          <div class="ov-cap">
+            <h4>Sector Overview</h4>
+            <span class="ov-coord" id="ov-coords">—</span>
+          </div>
+          <div id="minimap-root" class="minimap"></div>
+        </section>
+
+      <div class="dossier">
+        <h3>Briefing Dossier</h3>
+
+        <h4>Doctrine</h4>
+        <div class="doctrine-line" id="d-doctrine">
+          <img id="d-doctrine-img" alt="" />
+          <div>
+            <div class="name" id="d-doctrine-name">—</div>
+            <div class="wp-bar"><span class="nb" id="d-doctrine-alias"></span></div>
+          </div>
+        </div>
+
+        <h4>War Points</h4>
+        <div class="wp-bar">
+          BUDGET <span class="nb" id="d-wp-budget">—</span> &middot;
+          SPENT <span class="nb" id="d-wp-spent">—</span> &middot;
+          LEFT <span class="nb" id="d-wp-left">—</span>
+        </div>
+
+        <h4>Order of Battle</h4>
+        <div id="d-inventory"></div>
+
+        <h4>Map Legend</h4>
+        <div class="legend-grid">
+          <span><span class="sw P"></span>Plains</span>
+          <span><span class="sw F"></span>Forest</span>
+          <span><span class="sw M"></span>Mountain</span>
+          <span><span class="sw S"></span>Swamp</span>
+        </div>
+
+        <h4>Selection</h4>
+        <div class="sel-card" id="d-selection">
+          <div class="sel-empty">No unit selected. Click a token on the map.</div>
+        </div>
+
+        <div class="action-row">
+          <button id="btn-clear">↩ Clear Map</button>
+          <button id="btn-rules">Rules</button>
+          <button id="btn-setup" class="danger">New Briefing</button>
+        </div>
+      </div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div id="hint">▸ Drop a briefing on the desk, or pick a routine</div>
+
+  <!-- Globals -->
+  <script src="../src/tools/pathfinder.js"></script>
+  <script src="../src/tools/unit-movement.js"></script>
+  <script src="../src/tools/chroma-renderer.js"></script>
+
+  <!-- Game modules -->
+  <script src="js/state/parser.js"></script>
+  <script src="js/state/gameState.js"></script>
+  <script src="js/render/mapRenderer.js"></script>
+  <script src="js/render/minimapRenderer.js"></script>
+  <script src="js/bridges/chromaBridge.js"></script>
+  <script src="js/render/unitRenderer.js"></script>
+  <script src="js/bridges/engineBridge.js"></script>
+  <script src="js/interaction/selection.js"></script>
+  <script src="js/interaction/input.js"></script>
+  <script src="js/dossier.js"></script>
+  <script src="js/main.js"></script>
+
+  <!-- Briefing auto-load bridge (kept exactly as before) -->
+  <script>
+    (function () {
+      var code = localStorage.getItem('pregame_briefing');
+      if (!code) return;
+      localStorage.removeItem('pregame_briefing');
+      var ta  = document.getElementById('paste-textarea');
+      var btn = document.getElementById('btn-load');
+      if (ta && btn) { ta.value = code; btn.click(); }
+    })();
+  </script>
+
+  <!-- Desk view command-button wiring -->
+  <script src="js/desk.js"></script>
+
+</body>
+</html>

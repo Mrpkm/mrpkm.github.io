@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strategy Game — Orchestration Engine</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #1a1a2e;
+      color: #c8d6c5;
+      padding: 12px;
+      font-size: 13px;
+    }
+    h1 { font-size: 14px; color: #e2b65a; border-bottom: 1px solid #333; padding-bottom: 4px; margin-bottom: 8px; }
+    h2 { font-size: 12px; color: #7faa6e; margin: 8px 0 4px; }
+    .panel {
+      background: #16213e;
+      border: 1px solid #333;
+      border-radius: 4px;
+      padding: 8px;
+      margin-bottom: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .panel pre { white-space: pre-wrap; word-break: break-all; font-size: 11px; }
+    .status { display: flex; gap: 12px; flex-wrap: wrap; }
+    .status .tag {
+      background: #0f3460;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 11px;
+    }
+    .status .tag.ok { border-left: 3px solid #4ecca3; }
+    .status .tag.warn { border-left: 3px solid #e2b65a; }
+    .tag .label { color: #888; }
+    #log { color: #6b8; font-size: 11px; max-height: 120px; overflow-y: auto; }
+    #log div { border-bottom: 1px dotted #222; padding: 1px 0; }
+  </style>
+</head>
+<body>
+
+<h1>// ORCHESTRATION ENGINE — v1.0</h1>
+
+<div class="status" id="status-bar">
+  <span class="tag ok"><span class="label">ENGINE:</span> READY</span>
+  <span class="tag ok"><span class="label">TURN:</span> <span id="s-turn">—</span></span>
+  <span class="tag ok"><span class="label">PHASE:</span> <span id="s-phase">IDLE</span></span>
+  <span class="tag ok"><span class="label">DOCTRINE P1:</span> <span id="s-d1">—</span></span>
+  <span class="tag ok"><span class="label">DOCTRINE P2:</span> <span id="s-d2">—</span></span>
+</div>
+
+<h2>Last Decision</h2>
+<div class="panel" id="decision-panel"><pre id="decision-out">No decisions yet.</pre></div>
+
+<h2>Game State Snapshot</h2>
+<div class="panel" id="state-panel"><pre id="state-out">No state loaded.</pre></div>
+
+<h2>Engine Log</h2>
+<div class="panel" id="log"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  CONSTANTS — derived from the v0.18 ruleset .md files
+  // ═══════════════════════════════════════════════════════════════════
+
+  const UNIT_DEFS = {
+    Infantry:  { hp: 4, str: 1, def: 0, moveOrtho: 2, moveDiag: 1, reachOrtho: 1, reachDiag: 1, reachMode: 'uniform' },
+    Cavalry:   { hp: 3, str: 0.5, def: 1, moveChebyshev: 2, reachOrtho: 2, reachDiag: 2, reachMode: 'uniform' },
+    Tanks:     { hp: 8, str: 3, def: 3, moveOrtho: 3, moveDiag: 0, reachOrtho: 4, reachDiag: 3, reachMode: 'asymmetric' },
+    Motorized: { hp: 6, str: 2, def: 1, moveOrtho: 3, moveDiag: 2, reachOrtho: 3, reachDiag: 3, reachMode: 'uniform' },
+    Artillery: { hp: 2, str: 3, def: 0.5, moveOrtho: 1, moveDiag: 1, reachOrtho: 6, reachDiag: 6, reachMode: 'uniform' }
+  };
+
+  const DOCTRINE_OVERRIDES = {
+    Blitzkrieg: {
+      tankMove: { ortho: 4, diag: 0 },
+      startingArmy: { Tanks: 6, Motorized: 4, Infantry: 4 },
+      warPoints: 25,
+      signature: 'still_penalty'
+    },
+    SuperiorFirepower: {
+      tankMove: { ortho: 2, diag: 1 },
+      artilleryRange: 12,
+      artilleryFalloffStart: 8,
+      artilleryFalloffPenalty: -0.5,
+      startingArmy: { Artillery: 6, Cavalry: 4, Infantry: 4 },
+      warPoints: 35,
+      signature: 'extended_artillery'
+    },
+    Plain: {
+      tankMove: { ortho: 2, diag: 0 },
+      startingArmyTotal: 14,
+      startingArmyMaxPerClass: 5,
+      warPoints: 30,
+      signature: 'none'
+    }
+  };
+
+  const TERRAIN = {
+    grassland: { defBonus: { Infantry: 0, Cavalry: 0, Tanks: 0, Motorized: 0, Artillery: 0 }, canEnter: ['Infantry','Cavalry','Tanks','Motorized','Artillery'], movePenalty: 0, canTrench: true },
+    swamp:     { defBonus: { Infantry: 1, Cavalry: 1, Tanks: 0.5, Motorized: 0.5, Artillery: 1 }, canEnter: ['Infantry','Cavalry','Tanks','Motorized','Artillery'], movePenalty: 1, canTrench: false },
+    forest:    { defBonus: { Infantry: 1.5, Cavalry: 1.5, Tanks: 1.5, Motorized: 1.5 }, canEnter: ['Infantry','Cavalry','Tanks','Motorized'], movePenalty: 1, canTrench: true },
+    mountain:  { defBonus: { Infantry: 2, Cavalry: 2 }, canEnter: ['Infantry','Cavalry'], movePenalty: 0, canTrench: true, attackPenalty: -1 }
+  };
+
+  const FACINGS = ['N', 'E', 'S', 'W'];
+
+  const FRONT_SIDE_REAR = {
+    N: { front: ['N','NW','NE'], side: ['E','W'], rear: ['S','SW','SE'] },
+    E: { front: ['E','NE','SE'], side: ['N','S'], rear: ['W','NW','SW'] },
+    S: { front: ['S','SW','SE'], side: ['E','W'], rear: ['N','NW','NE'] },
+    W: { front: ['W','NW','SW'], side: ['N','S'], rear: ['E','NE','SE'] }
+  };
+
+  const RANK_NAMES = { 1: 'Corporal', 2: 'Captain', 3: 'Colonel' };
+
+  const PROGRESSION = {
+    Infantry: [
+      null,
+      { str: 1, def: 1 },
+      { hp: 1, def: 1 },
+      { str: 1, def: 1 }
+    ],
+    Cavalry: [
+      null,
+      { str: 1, def: 1 },
+      { def: 1, moveBonusChebyshev: 2 },
+      { str: 1, def: 1 }
+    ],
+    Tanks: [
+      null,
+      { moveOrthoBonus: 1, drawback: 'minus_1_atk_stamina_this_turn_no_move_next' },
+      { atkStaminaBonus: 1, drawback: 'no_attack_next_turn' },
+      { waitDefBonus: 2, drawback: 'wait_1_turn' }
+    ],
+    Motorized: [
+      null,
+      { moveOrthoBonus: 1, drawback: 'minus_1_atk_stamina_this_turn_no_move_next' },
+      { atkStaminaBonus: 1, drawback: 'no_attack_next_turn' },
+      { waitDefBonus: 2, drawback: 'wait_1_turn' }
+    ],
+    Artillery: [
+      null,
+      { reachBonus: 1 },
+      { strBonusWithin5: 2 },
+      { moveOrthoBonus: 1 }
+    ]
+  };
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  HELPERS
+  // ═══════════════════════════════════════════════════════════════════
+
+  function _log(msg) {
+    const el = document.getElementById('log');
+    if (el) {
+      const d = document.createElement('div');
+      d.textContent = new Date().toISOString().slice(11, 23) + ' ' + msg;
+      el.prepend(d);
+      while (el.children.length > 100) el.removeChild(el.lastChild);
+    }
+  }
+
+  function _updateStatusBar(state) {
+    const $ = id => document.getElementById(id);
+    if (state) {
+      $('s-turn').textContent = state.turnNumber || '—';
+      $('s-phase').textContent = state.phase || 'IDLE';
+      $('s-d1').textContent = state.players?.[0]?.doctrine || '—';
+      $('s-d2').textContent = state.players?.[1]?.doctrine || '—';
+    }
+  }
+
+  function _showDecision(result) {
+    const el = document.getElementById('decision-out');
+    if (el) el.textContent = JSON.stringify(result, null, 2);
+  }
+
+  function _showState(state) {
+    const el = document.getElementById('state-out');
+    if (el) {
+      const summary = {
+        turnNumber: state.turnNumber,
+        activePlayer: state.activePlayer,
+        phase: state.phase,
+        p1Units: state.players?.[0]?.units?.length || 0,
+        p2Units: state.players?.[1]?.units?.length || 0,
+        p1HqHp: state.players?.[0]?.hqHp,
+        p2HqHp: state.players?.[1]?.hqHp
+      };
+      el.textContent = JSON.stringify(summary, null, 2);
+    }
+  }
+
+  function _getDirection(fromRow, fromCol, toRow, toCol) {
+    const dr = toRow - fromRow;
+    const dc = toCol - fromCol;
+    if (dr === 0 && dc === 0) return null;
+    if (dr < 0 && dc === 0) return 'N';
+    if (dr > 0 && dc === 0) return 'S';
+    if (dr === 0 && dc > 0) return 'E';
+    if (dr === 0 && dc < 0) return 'W';
+    if (dr < 0 && dc > 0) return 'NE';
+    if (dr < 0 && dc < 0) return 'NW';
+    if (dr > 0 && dc > 0) return 'SE';
+    if (dr > 0 && dc < 0) return 'SW';
+    return null;
+  }
+
+  function _classifyAttackDirection(attackDir, defenderFacing) {
+    const mapping = FRONT_SIDE_REAR[defenderFacing];
+    if (!mapping) return 'front';
+    if (mapping.front.includes(attackDir)) return 'front';
+    if (mapping.side.includes(attackDir)) return 'side';
+    if (mapping.rear.includes(attackDir)) return 'rear';
+    return 'front';
+  }
+
+  function _getEffectiveStats(unit, doctrine) {
+    const base = { ...UNIT_DEFS[unit.type] };
+    if (unit.type === 'Tanks' && DOCTRINE_OVERRIDES[doctrine]?.tankMove) {
+      base.moveOrtho = DOCTRINE_OVERRIDES[doctrine].tankMove.ortho;
+      base.moveDiag = DOCTRINE_OVERRIDES[doctrine].tankMove.diag;
+    }
+    if (unit.type === 'Artillery' && DOCTRINE_OVERRIDES[doctrine]?.artilleryRange) {
+      base.reachOrtho = DOCTRINE_OVERRIDES[doctrine].artilleryRange;
+      base.reachDiag = DOCTRINE_OVERRIDES[doctrine].artilleryRange;
+    }
+    const level = unit.level || 0;
+    for (let l = 1; l <= level; l++) {
+      const prog = PROGRESSION[unit.type]?.[l];
+      if (!prog) continue;
+      if (prog.str) base.str += prog.str;
+      if (prog.def) base.def += prog.def;
+      if (prog.hp) base.hp += prog.hp;
+      if (prog.moveOrthoBonus) base.moveOrtho += prog.moveOrthoBonus;
+      if (prog.moveBonusChebyshev) {
+        base.moveChebyshev = (base.moveChebyshev || Math.max(base.moveOrtho || 0, base.moveDiag || 0)) + prog.moveBonusChebyshev;
+      }
+      if (prog.reachBonus) {
+        base.reachOrtho += prog.reachBonus;
+        base.reachDiag += prog.reachBonus;
+      }
+    }
+    return base;
+  }
+
+  function _chebyshevDist(r1, c1, r2, c2) {
+    return Math.max(Math.abs(r1 - r2), Math.abs(c1 - c2));
+  }
+
+  function _manhattanAxis(r1, c1, r2, c2) {
+    const dr = Math.abs(r1 - r2);
+    const dc = Math.abs(c1 - c2);
+    const isOrtho = (dr === 0 || dc === 0);
+    const isDiag = (dr === dc);
+    return { isOrtho, isDiag, dist: isOrtho ? (dr + dc) : (isDiag ? dr : null) };
+  }
+
+  function _isInReach(attacker, target, doctrine) {
+    const stats = _getEffectiveStats(attacker, doctrine);
+    const axis = _manhattanAxis(attacker.row, attacker.col, target.row, target.col);
+    if (axis.isOrtho && axis.dist <= stats.reachOrtho) return true;
+    if (axis.isDiag && axis.dist <= stats.reachDiag) return true;
+    if (stats.reachMode === 'uniform') {
+      const cheby = _chebyshevDist(attacker.row, attacker.col, target.row, target.col);
+      return cheby <= stats.reachOrtho;
+    }
+    return false;
+  }
+
+  function _orthogonalDirectionToTarget(unit, target, doctrine) {
+    const stats = _getEffectiveStats(unit, doctrine);
+    const axis = _manhattanAxis(unit.row, unit.col, target.row, target.col);
+    if (!axis.isOrtho || axis.dist < 1 || axis.dist > stats.reachOrtho) return null;
+    return _getDirection(unit.row, unit.col, target.row, target.col);
+  }
+
+  function _isOrthogonallyAdjacent(unit, target) {
+    const axis = _manhattanAxis(unit.row, unit.col, target.row, target.col);
+    return axis.isOrtho && axis.dist === 1;
+  }
+
+  function _friendlyTacticsContributors(friendlies, target, doctrine) {
+    const dirs = new Set();
+    const tankDirs = new Set();
+    friendlies.forEach(function (unit) {
+      if (unit.type === 'Tanks') {
+        const dir = _orthogonalDirectionToTarget(unit, target, doctrine);
+        if (dir) {
+          dirs.add(dir);
+          tankDirs.add(dir);
+        }
+        return;
+      }
+      if (_isOrthogonallyAdjacent(unit, target)) {
+        const dir = _getDirection(unit.row, unit.col, target.row, target.col);
+        if (dir) dirs.add(dir);
+      }
+    });
+    return { dirs: dirs, tankDirs: tankDirs };
+  }
+
+  function _isStandardEncircled(enemyUnits, target) {
+    const needed = new Set(['N', 'E', 'S', 'W']);
+    enemyUnits.forEach(function (unit) {
+      if (!_isOrthogonallyAdjacent(unit, target)) return;
+      needed.delete(_getDirection(unit.row, unit.col, target.row, target.col));
+    });
+    return needed.size === 0;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  CORE ENGINE FUNCTIONS — exposed on window for Puppeteer
+  // ═══════════════════════════════════════════════════════════════════
+
+  /**
+   * Validate a full game state object. Returns { valid, errors }.
+   */
+  window.validateGameState = function (gameState) {
+    _log('validateGameState called');
+    const errors = [];
+
+    if (!gameState) return { valid: false, errors: ['gameState is null/undefined'] };
+    if (!gameState.players || gameState.players.length !== 2) errors.push('Must have exactly 2 players');
+    if (typeof gameState.turnNumber !== 'number') errors.push('turnNumber must be a number');
+    if (!gameState.board || !gameState.board.grid) errors.push('board.grid is required');
+
+    (gameState.players || []).forEach(function (p, i) {
+      if (!p.doctrine) errors.push('Player ' + i + ' missing doctrine');
+      if (!Array.isArray(p.units)) errors.push('Player ' + i + ' missing units array');
+      if (typeof p.hqHp !== 'number') errors.push('Player ' + i + ' missing hqHp');
+      (p.units || []).forEach(function (u, j) {
+        if (!UNIT_DEFS[u.type]) errors.push('P' + i + ' unit ' + j + ': unknown type "' + u.type + '"');
+        if (typeof u.row !== 'number' || typeof u.col !== 'number') errors.push('P' + i + ' unit ' + j + ': missing position');
+        if (!FACINGS.includes(u.facing)) errors.push('P' + i + ' unit ' + j + ': invalid facing "' + u.facing + '"');
+      });
+    });
+
+    const result = { valid: errors.length === 0, errors: errors };
+    return result;
+  };
+
+  /**
+   * Analyze a game state and return a structured assessment.
+   */
+  window.analyzeGameState = function (gameState) {
+    _log('analyzeGameState called');
+    const validation = window.validateGameState(gameState);
+    if (!validation.valid) return { error: 'Invalid game state', details: validation.errors };
+
+    const analysis = {
+      timestamp: new Date().toISOString(),
+      turnNumber: gameState.turnNumber,
+      activePlayer: gameState.activePlayer,
+      phase: gameState.phase || 'action',
+      players: []
+    };
+
+    gameState.players.forEach(function (p, idx) {
+      const unitsByType = {};
+      let totalHp = 0;
+      let totalStr = 0;
+
+      p.units.forEach(function (u) {
+        if (!unitsByType[u.type]) unitsByType[u.type] = { count: 0, totalHp: 0 };
+        unitsByType[u.type].count++;
+        const stats = _getEffectiveStats(u, p.doctrine);
+        unitsByType[u.type].totalHp += (u.currentHp != null ? u.currentHp : stats.hp);
+        totalHp += (u.currentHp != null ? u.currentHp : stats.hp);
+        totalStr += stats.str;
+      });
+
+      const trenchedUnits = p.units.filter(function (u) { return u.trenchTurns >= 3; }).length;
+      const formations = p.units.filter(function (u) { return u.formationWith != null; }).length / 2;
+
+      analysis.players.push({
+        playerIndex: idx,
+        doctrine: p.doctrine,
+        unitCount: p.units.length,
+        unitsByType: unitsByType,
+        totalHp: totalHp,
+        totalStrength: totalStr,
+        hqHp: p.hqHp,
+        hqOccupyTimer: p.hqOccupyTimer || 0,
+        trenchedUnits: trenchedUnits,
+        formations: Math.floor(formations)
+      });
+    });
+
+    analysis.threatAssessment = _assessThreats(gameState);
+    analysis.boardControl = _assessBoardControl(gameState);
+
+    _showState(gameState);
+    _updateStatusBar(gameState);
+    return analysis;
+  };
+
+  function _assessThreats(state) {
+    const threats = [];
+    state.players.forEach(function (p, pi) {
+      const opponent = state.players[1 - pi];
+      const hqPos = p.hqPosition || { row: pi === 0 ? 1 : state.board.rows, col: pi === 0 ? 1 : state.board.cols };
+
+      opponent.units.forEach(function (u) {
+        const dist = _chebyshevDist(u.row, u.col, hqPos.row, hqPos.col);
+        if (dist <= 5) {
+          threats.push({
+            targetPlayer: pi,
+            unit: { id: u.id, type: u.type, row: u.row, col: u.col },
+            distanceToHq: dist,
+            inHqReach: dist <= 3,
+            severity: dist <= 3 ? 'critical' : 'warning'
+          });
+        }
+      });
+    });
+    return threats;
+  }
+
+  function _assessBoardControl(state) {
+    const rows = state.board?.rows || 12;
+    const cols = state.board?.cols || 11;
+    const midRow = Math.floor(rows / 2);
+    const control = { player0: { ownHalf: 0, enemyHalf: 0 }, player1: { ownHalf: 0, enemyHalf: 0 } };
+
+    state.players.forEach(function (p, pi) {
+      p.units.forEach(function (u) {
+        if (pi === 0) {
+          if (u.row <= midRow) control.player0.ownHalf++;
+          else control.player0.enemyHalf++;
+        } else {
+          if (u.row > midRow) control.player1.ownHalf++;
+          else control.player1.enemyHalf++;
+        }
+      });
+    });
+
+    return control;
+  }
+
+  /**
+   * Resolve a combat action between an attacker and defender.
+   * Returns full combat result with damage, modifiers breakdown, and updated unit states.
+   */
+  window.resolveCombat = function (gameState, attackerUnitId, defenderUnitId, diceRoll) {
+    _log('resolveCombat: ' + attackerUnitId + ' → ' + defenderUnitId + ' (roll: ' + diceRoll + ')');
+
+    const attPlayer = gameState.players.find(function (p) { return p.units.some(function (u) { return u.id === attackerUnitId; }); });
+    const defPlayer = gameState.players.find(function (p) { return p.units.some(function (u) { return u.id === defenderUnitId; }); });
+    if (!attPlayer || !defPlayer) return { error: 'Unit not found' };
+
+    const attacker = attPlayer.units.find(function (u) { return u.id === attackerUnitId; });
+    const defender = defPlayer.units.find(function (u) { return u.id === defenderUnitId; });
+    const attDoctrine = attPlayer.doctrine;
+    const defDoctrine = defPlayer.doctrine;
+
+    if ((attacker.actionsRemaining != null ? attacker.actionsRemaining : 2) <= 0) {
+      return { error: 'Attacker has no actions remaining' };
+    }
+
+    if (!_isInReach(attacker, defender, attDoctrine)) {
+      return { error: 'Target not in reach', attReach: _getEffectiveStats(attacker, attDoctrine) };
+    }
+
+    const roll = (typeof diceRoll === 'number') ? diceRoll : Math.floor(Math.random() * 6) + 1;
+    const attStats = _getEffectiveStats(attacker, attDoctrine);
+    const defStats = _getEffectiveStats(defender, defDoctrine);
+
+    const attackDir = _getDirection(attacker.row, attacker.col, defender.row, defender.col);
+    const dirClass = _classifyAttackDirection(attackDir, defender.facing);
+
+    const modifiers = { attacker: [], defender: [] };
+    let strBonus = 0;
+    let defBonus = 0;
+
+    const artilleryAttacking = attacker.type === 'Artillery';
+    const tactics = _friendlyTacticsContributors(attPlayer.units, defender, attDoctrine);
+    const attackerOrthoDir = _orthogonalDirectionToTarget(attacker, defender, attDoctrine);
+    const effectiveDirClass = attackerOrthoDir ? dirClass : 'front';
+
+    if (!artilleryAttacking && attackerOrthoDir) {
+      if (effectiveDirClass === 'side') {
+        strBonus += 0.5;
+        defBonus -= 0.5;
+        modifiers.attacker.push({ source: 'side_attack', value: 0.5 });
+        modifiers.defender.push({ source: 'side_attack_received', value: -0.5 });
+      } else if (effectiveDirClass === 'rear') {
+        strBonus += 1;
+        defBonus -= 1;
+        modifiers.attacker.push({ source: 'rear_attack', value: 1 });
+        modifiers.defender.push({ source: 'rear_attack_received', value: -1 });
+      }
+
+      if (tactics.dirs.size >= 2) {
+        strBonus += 1;
+        modifiers.attacker.push({ source: 'double_attack', value: 1 });
+      }
+
+      if (_isStandardEncircled(attPlayer.units, defender) || tactics.tankDirs.size >= 2) {
+        strBonus += 3;
+        defBonus -= 2;
+        modifiers.attacker.push({ source: 'encirclement', value: 3 });
+        modifiers.defender.push({ source: 'encirclement_received', value: -2 });
+      }
+    }
+
+    const defTerrain = _getTerrainAt(gameState.board, defender.row, defender.col);
+    if (defTerrain && TERRAIN[defTerrain]) {
+      const tBonus = TERRAIN[defTerrain].defBonus?.[defender.type] || 0;
+      if (tBonus > 0) {
+        defBonus += tBonus;
+        modifiers.defender.push({ source: 'terrain_' + defTerrain, value: tBonus });
+      }
+    }
+
+    if (!artilleryAttacking) {
+      const attTerrain = _getTerrainAt(gameState.board, attacker.row, attacker.col);
+      if (attTerrain === 'mountain') {
+        strBonus -= 1;
+        modifiers.attacker.push({ source: 'mountain_attack_penalty', value: -1 });
+      }
+      if (attTerrain === 'forest') {
+        strBonus += 1;
+        modifiers.attacker.push({ source: 'forest_attack_bonus', value: 1 });
+      }
+    }
+
+    if (defender.trenchTurns >= 3 && (defender.type === 'Infantry' || defender.type === 'Cavalry')) {
+      const trenchDef = defender.type === 'Infantry' ? 2 : 1.5;
+      const isPermanent = defender.trenchTurns >= 6 || defender.onPermanentTrench;
+      const actualTrenchDef = isPermanent ? 1 : trenchDef;
+      defBonus += actualTrenchDef;
+      modifiers.defender.push({ source: 'trench', value: actualTrenchDef });
+    }
+
+    if (defender.type === 'Tanks' && defDoctrine === 'Blitzkrieg' && defender.stillTurns > 0) {
+      const penalty = -defender.stillTurns;
+      defBonus += penalty;
+      modifiers.defender.push({ source: 'blitzkrieg_still_penalty', value: penalty });
+    }
+
+    if (attDoctrine === 'SuperiorFirepower' && attacker.type === 'Artillery') {
+      const dist = _chebyshevDist(attacker.row, attacker.col, defender.row, defender.col);
+      const falloffStart = 8 + Math.min(1, attacker.level || 0);
+      if (dist > falloffStart) {
+        strBonus -= 0.5;
+        modifiers.attacker.push({ source: 'sf_range_falloff', value: -0.5 });
+      }
+      const artLevel = attacker.level || 0;
+      if (artLevel >= 2 && dist <= 5) {
+        strBonus += 2;
+        modifiers.attacker.push({ source: 'artillery_l2_close_range', value: 2 });
+      }
+    }
+
+    const totalAttack = roll + attStats.str + strBonus;
+    const totalDefense = defStats.def + defBonus;
+    let damage = totalAttack - totalDefense;
+
+    const isBounce = attDoctrine === 'Blitzkrieg' && attacker.type === 'Tanks'
+      && (attacker.level || 0) >= 1 && attacker.cantMove && (attacker.atkStamina || 0) <= 1;
+    let attackerSelfDamage = 0;
+
+    if (!isBounce) {
+      damage = Math.max(1, damage);
+    } else {
+      damage = Math.max(-3, damage);
+      modifiers.attacker.push({ source: 'blitzkrieg_bounce_eligible', value: 0 });
+      if (damage < 0) {
+        attackerSelfDamage = Math.abs(damage);
+        damage = 0;
+      }
+    }
+
+    const defenderHp = (defender.currentHp != null ? defender.currentHp : defStats.hp);
+    const remainingHp = defenderHp - damage;
+    const killed = remainingHp <= 0;
+    const attackerHp = attacker.currentHp != null ? attacker.currentHp : attStats.hp;
+
+    let counterAttack = { triggered: false };
+    let attackerRemainingHp = attackerHp - attackerSelfDamage;
+    if (!killed && attackerRemainingHp > 0 && (defender.actionsRemaining != null ? defender.actionsRemaining : 2) > 0) {
+      const counterRoll = Math.floor(Math.random() * 6) + 1;
+      const exhaustedBonusRoll = ((attacker.actionsRemaining != null ? attacker.actionsRemaining : 2) <= 1)
+        ? Math.floor(Math.random() * 6) + 1
+        : 0;
+      const exhaustedBonus = exhaustedBonusRoll * 0.5;
+      const rawCounterDamage = counterRoll + defStats.str + exhaustedBonus - attStats.def;
+      const counterDamage = Math.max(1, rawCounterDamage);
+      attackerRemainingHp -= counterDamage;
+      counterAttack = {
+        triggered: true,
+        diceRoll: counterRoll,
+        exhaustedAttackerBonusRoll: exhaustedBonusRoll || null,
+        exhaustedAttackerBonus: exhaustedBonus,
+        damage: counterDamage,
+        attackerRemainingHp: Math.max(0, attackerRemainingHp),
+        attackerKilled: attackerRemainingHp <= 0
+      };
+    }
+
+    let xpGained = false;
+    if (killed) {
+      const defTotalStr = defStats.str;
+      const attTotalStr = attStats.str;
+      xpGained = (defender.level || 0) > (attacker.level || 0)
+        || defTotalStr > attTotalStr
+        || defDoctrine !== attDoctrine;
+    }
+
+    const result = {
+      action: 'combat',
+      diceRoll: roll,
+      attacker: { id: attacker.id, type: attacker.type, baseStr: attStats.str, strBonus: strBonus, totalAttack: totalAttack },
+      defender: { id: defender.id, type: defender.type, baseDef: defStats.def, defBonus: defBonus, totalDefense: totalDefense, previousHp: defenderHp, remainingHp: Math.max(0, remainingHp) },
+      direction: effectiveDirClass,
+      damage: damage,
+      killed: killed,
+      xpGained: xpGained,
+      tankGif: 'assets/units/animations/tank/tank-attack.gif',
+      attackType: effectiveDirClass + (modifiers.attacker.some(function (m) { return m.source === 'encirclement'; }) ? '_encirclement' : ''),
+      modifiers: modifiers,
+      counterAttack: counterAttack,
+      stateUpdates: {
+        defenderHp: Math.max(0, remainingHp),
+        defenderKilled: killed,
+        attackerHp: Math.max(0, attackerRemainingHp),
+        attackerKilled: attackerRemainingHp <= 0,
+        attackerXpUp: xpGained,
+        defenderActionsRemaining: counterAttack.triggered
+          ? Math.max(0, (defender.actionsRemaining != null ? defender.actionsRemaining : 2) - 1)
+          : (defender.actionsRemaining != null ? defender.actionsRemaining : 2)
+      }
+    };
+
+    _showDecision(result);
+    _log('Combat result: ' + damage + ' damage' + (killed ? ' — KILLED' : ''));
+    return result;
+  };
+
+  function _getTerrainAt(board, row, col) {
+    if (!board || !board.grid) return 'grassland';
+    const cell = board.grid[(row - 1)]?.[(col - 1)];
+    const terrainMap = { 0: 'grassland', 1: 'swamp', 2: 'forest', 3: 'mountain', P: 'grassland', S: 'swamp', F: 'forest', M: 'mountain' };
+    return terrainMap[cell] || 'grassland';
+  }
+
+  /**
+   * Compute all legal moves for a given unit.
+   */
+  window.getLegalMoves = function (gameState, unitId) {
+    _log('getLegalMoves: ' + unitId);
+    const player = gameState.players.find(function (p) { return p.units.some(function (u) { return u.id === unitId; }); });
+    if (!player) return { error: 'Unit not found' };
+
+    const unit = player.units.find(function (u) { return u.id === unitId; });
+    const stats = _getEffectiveStats(unit, player.doctrine);
+    const allUnits = gameState.players.flatMap(function (p) { return p.units; });
+    const occupied = new Set(allUnits.map(function (u) { return u.row + ',' + u.col; }));
+    occupied.delete(unit.row + ',' + unit.col);
+
+    const rows = gameState.board?.rows || 12;
+    const cols = gameState.board?.cols || 11;
+    const moves = [];
+
+    const canEnterMap = {
+      Infantry: ['grassland','swamp','forest','mountain'],
+      Cavalry: ['grassland','swamp','forest','mountain'],
+      Tanks: ['grassland','swamp','forest'],
+      Motorized: ['grassland','swamp','forest'],
+      Artillery: ['grassland','swamp']
+    };
+    const canEnter = new Set(canEnterMap[unit.type] || ['grassland']);
+
+    const isCavalry = unit.type === 'Cavalry';
+    const range = isCavalry ? (stats.moveChebyshev || 2) : null;
+
+    function tryTile(r, c, dist, maxRange) {
+      if (r < 1 || r > rows || c < 1 || c > cols) return;
+      if (occupied.has(r + ',' + c)) return;
+      const terrain = _getTerrainAt(gameState.board, r, c);
+      if (!canEnter.has(terrain)) return;
+      const penalty = TERRAIN[terrain]?.movePenalty || 0;
+      if (dist + penalty <= maxRange) {
+        moves.push({ row: r, col: c, terrain: terrain });
+      }
+    }
+
+    if (isCavalry) {
+      for (let dr = -range; dr <= range; dr++) {
+        for (let dc = -range; dc <= range; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const dist = Math.max(Math.abs(dr), Math.abs(dc));
+          tryTile(unit.row + dr, unit.col + dc, dist, range);
+        }
+      }
+    } else {
+      const ortho = stats.moveOrtho || 0;
+      const diag = stats.moveDiag || 0;
+      [[-1,0],[1,0],[0,-1],[0,1]].forEach(function (d) {
+        for (let s = 1; s <= ortho; s++) tryTile(unit.row + d[0]*s, unit.col + d[1]*s, s, ortho);
+      });
+      [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(function (d) {
+        for (let s = 1; s <= diag; s++) tryTile(unit.row + d[0]*s, unit.col + d[1]*s, s, diag);
+      });
+    }
+
+    return { unitId: unitId, unitType: unit.type, currentPos: { row: unit.row, col: unit.col }, legalMoves: moves, moveCount: moves.length };
+  };
+
+  /**
+   * Get all valid attack targets for a unit.
+   */
+  window.getAttackTargets = function (gameState, unitId) {
+    _log('getAttackTargets: ' + unitId);
+    const playerIdx = gameState.players.findIndex(function (p) { return p.units.some(function (u) { return u.id === unitId; }); });
+    if (playerIdx === -1) return { error: 'Unit not found' };
+
+    const player = gameState.players[playerIdx];
+    const unit = player.units.find(function (u) { return u.id === unitId; });
+    const opponent = gameState.players[1 - playerIdx];
+
+    const targets = [];
+    opponent.units.forEach(function (target) {
+      if (_isInReach(unit, target, player.doctrine)) {
+        const dir = _getDirection(unit.row, unit.col, target.row, target.col);
+        const orthoDir = _orthogonalDirectionToTarget(unit, target, player.doctrine);
+        const dirClass = orthoDir ? _classifyAttackDirection(dir, target.facing) : 'front';
+        targets.push({
+          unitId: target.id,
+          type: target.type,
+          position: { row: target.row, col: target.col },
+          direction: dirClass,
+          attackType: dirClass,
+          tankGif: 'assets/units/animations/tank/tank-attack.gif',
+          distance: _chebyshevDist(unit.row, unit.col, target.row, target.col),
+          facing: target.facing,
+          currentHp: target.currentHp != null ? target.currentHp : _getEffectiveStats(target, opponent.doctrine).hp
+        });
+      }
+    });
+
+    return { unitId: unitId, unitType: unit.type, targets: targets };
+  };
+
+  /**
+   * Execute a move action and return the updated unit state.
+   */
+  window.executeMove = function (gameState, unitId, toRow, toCol) {
+    _log('executeMove: ' + unitId + ' → ' + toRow + ',' + toCol);
+    const moves = window.getLegalMoves(gameState, unitId);
+    if (moves.error) return moves;
+
+    const isLegal = moves.legalMoves.some(function (m) { return m.row === toRow && m.col === toCol; });
+    if (!isLegal) return { error: 'Illegal move', destination: { row: toRow, col: toCol }, legalMoves: moves.legalMoves };
+
+    const terrain = _getTerrainAt(gameState.board, toRow, toCol);
+    const result = {
+      action: 'move',
+      unitId: unitId,
+      from: { row: moves.currentPos.row, col: moves.currentPos.col },
+      to: { row: toRow, col: toCol },
+      terrain: terrain,
+      stateUpdates: {
+        unitPosition: { row: toRow, col: toCol },
+        trenchReset: true,
+        stillTurnsReset: true,
+        moveStaminaUsed: 1
+      }
+    };
+
+    _showDecision(result);
+    return result;
+  };
+
+  /**
+   * Rotate a unit's facing. Free action, no cost.
+   */
+  window.rotateUnit = function (gameState, unitId, newFacing) {
+    _log('rotateUnit: ' + unitId + ' → ' + newFacing);
+    if (!FACINGS.includes(newFacing)) return { error: 'Invalid facing: ' + newFacing, validFacings: FACINGS };
+
+    return {
+      action: 'rotate',
+      unitId: unitId,
+      newFacing: newFacing,
+      cost: 0,
+      stateUpdates: { unitFacing: newFacing }
+    };
+  };
+
+  /**
+   * Get the next strategic action recommendation for the active player.
+   * This is the AI advisor — it evaluates the board and suggests the best move.
+   */
+  window.getNextStrategicAction = function (gameState) {
+    _log('getNextStrategicAction called');
+    const validation = window.validateGameState(gameState);
+    if (!validation.valid) return { error: 'Invalid game state', details: validation.errors };
+
+    const pi = gameState.activePlayer;
+    const player = gameState.players[pi];
+    const opponent = gameState.players[1 - pi];
+    const analysis = window.analyzeGameState(gameState);
+
+    const candidates = [];
+
+    player.units.forEach(function (unit) {
+      if ((unit.actionsRemaining || 2) <= 0) return;
+
+      const targets = window.getAttackTargets(gameState, unit.id);
+      if (targets.targets) {
+        targets.targets.forEach(function (t) {
+          let priority = 50;
+          if (t.direction === 'rear') priority += 20;
+          else if (t.direction === 'side') priority += 10;
+          if (t.currentHp <= 2) priority += 15;
+          if (t.type === 'Artillery') priority += 10;
+
+          candidates.push({
+            type: 'attack',
+            unitId: unit.id,
+            unitType: unit.type,
+            targetId: t.unitId,
+            targetType: t.type,
+            direction: t.direction,
+            priority: priority,
+            reasoning: 'Attack ' + t.type + ' from ' + t.direction + ' (HP:' + t.currentHp + ')'
+          });
+        });
+      }
+
+      const moves = window.getLegalMoves(gameState, unit.id);
+      if (moves.legalMoves) {
+        const oppHqPos = opponent.hqPosition || { row: pi === 0 ? (gameState.board?.rows || 12) : 1, col: pi === 0 ? (gameState.board?.cols || 11) : 1 };
+
+        moves.legalMoves.forEach(function (m) {
+          const distToHq = _chebyshevDist(m.row, m.col, oppHqPos.row, oppHqPos.col);
+          let priority = 30;
+          if (distToHq <= 3) priority += 25;
+          else if (distToHq <= 5) priority += 10;
+          if (m.terrain === 'forest' || m.terrain === 'mountain') priority += 5;
+
+          if (unit.type === 'Tanks' && player.doctrine === 'Blitzkrieg') {
+            priority += 10;
+            if (unit.stillTurns > 0) priority += 15;
+          }
+
+          candidates.push({
+            type: 'move',
+            unitId: unit.id,
+            unitType: unit.type,
+            destination: { row: m.row, col: m.col },
+            terrain: m.terrain,
+            distToOpponentHq: distToHq,
+            priority: priority,
+            reasoning: 'Move ' + unit.type + ' toward objective (dist ' + distToHq + ')'
+          });
+        });
+      }
+    });
+
+    candidates.sort(function (a, b) { return b.priority - a.priority; });
+
+    const recommendation = candidates[0] || { type: 'end_turn', reasoning: 'No actions available', priority: 0 };
+
+    const result = {
+      action: 'strategic_recommendation',
+      turnNumber: gameState.turnNumber,
+      activePlayer: pi,
+      doctrine: player.doctrine,
+      recommendation: recommendation,
+      alternativeCount: Math.min(candidates.length - 1, 4),
+      alternatives: candidates.slice(1, 5),
+      analysis: {
+        ownUnits: player.units.length,
+        enemyUnits: opponent.units.length,
+        hqHp: player.hqHp,
+        enemyHqHp: opponent.hqHp,
+        threats: analysis.threatAssessment?.filter(function (t) { return t.targetPlayer === pi; }) || []
+      },
+      strategicNotes: _generateNotes(gameState, pi)
+    };
+
+    _showDecision(result);
+    return result;
+  };
+
+  function _generateNotes(state, pi) {
+    const notes = [];
+    const player = state.players[pi];
+    const opponent = state.players[1 - pi];
+
+    if (player.doctrine === 'Blitzkrieg') {
+      const stillTanks = player.units.filter(function (u) { return u.type === 'Tanks' && (u.stillTurns || 0) >= 2; });
+      if (stillTanks.length > 0) notes.push('WARNING: ' + stillTanks.length + ' tank(s) accumulating still-penalty — move them or lose defense');
+    }
+
+    if (player.doctrine === 'SuperiorFirepower') {
+      const artCount = player.units.filter(function (u) { return u.type === 'Artillery'; }).length;
+      if (artCount > 0) notes.push('SF advantage: ' + artCount + ' artillery units with extended range — maintain firing distance');
+    }
+
+    const trenchable = player.units.filter(function (u) { return (u.type === 'Infantry' || u.type === 'Cavalry') && (u.trenchTurns || 0) === 2; });
+    if (trenchable.length > 0) notes.push(trenchable.length + ' unit(s) 1 turn away from trench — hold position for defensive bonus');
+
+    if (player.hqHp <= 10) notes.push('CRITICAL: HQ HP at ' + player.hqHp + '/20 — prioritize defense');
+    if (opponent.hqHp <= 10) notes.push('OPPORTUNITY: Enemy HQ at ' + opponent.hqHp + '/20 — push for the kill');
+
+    if (state.turnNumber > 800) notes.push('ENDGAME: Turn ' + state.turnNumber + '/1000 — HP tiebreak approaching');
+
+    return notes;
+  }
+
+  /**
+   * Process end-of-turn bookkeeping.
+   * Returns all state mutations that should be applied.
+   */
+  window.endTurn = function (gameState) {
+    _log('endTurn called — turn ' + gameState.turnNumber);
+    const pi = gameState.activePlayer;
+    const player = gameState.players[pi];
+    const updates = [];
+
+    player.units.forEach(function (u) {
+      if (u.type === 'Tanks' && player.doctrine === 'Blitzkrieg') {
+        if (!u.movedThisTurn) {
+          const newStill = (u.stillTurns || 0) + 1;
+          updates.push({ unitId: u.id, field: 'stillTurns', value: newStill });
+          updates.push({ unitId: u.id, field: 'defPenalty', value: -newStill });
+        } else {
+          updates.push({ unitId: u.id, field: 'stillTurns', value: 0 });
+          updates.push({ unitId: u.id, field: 'defPenalty', value: 0 });
+        }
+      }
+
+      if ((u.type === 'Infantry' || u.type === 'Cavalry') && !u.movedThisTurn) {
+        const trenchTurns = (u.trenchTurns || 0) + 1;
+        updates.push({ unitId: u.id, field: 'trenchTurns', value: trenchTurns });
+        if (trenchTurns === 3) updates.push({ unitId: u.id, field: 'trenchActive', value: true });
+        if (trenchTurns === 6) updates.push({ unitId: u.id, field: 'permanentTrench', value: true });
+      }
+
+      updates.push({ unitId: u.id, field: 'actionsRemaining', value: 2 });
+      updates.push({ unitId: u.id, field: 'movedThisTurn', value: false });
+    });
+
+    const nextPlayer = 1 - pi;
+    const nextTurn = nextPlayer === 0 ? gameState.turnNumber + 1 : gameState.turnNumber;
+
+    const hqCheck = _checkHqStatus(gameState);
+
+    const result = {
+      action: 'end_turn',
+      completedTurn: gameState.turnNumber,
+      previousPlayer: pi,
+      nextPlayer: nextPlayer,
+      nextTurnNumber: nextTurn,
+      unitUpdates: updates,
+      hqStatus: hqCheck,
+      gameOver: hqCheck.gameOver || nextTurn > 1000,
+      winner: hqCheck.winner != null ? hqCheck.winner : (nextTurn > 1000 ? _tiebreakWinner(gameState) : null)
+    };
+
+    _showDecision(result);
+    return result;
+  };
+
+  function _checkHqStatus(state) {
+    const results = { gameOver: false, winner: null, details: [] };
+    state.players.forEach(function (p, i) {
+      if (p.hqHp <= 0) {
+        results.gameOver = true;
+        results.winner = 1 - i;
+        results.details.push('Player ' + i + ' HQ destroyed');
+      }
+      if ((p.hqOccupyTimer || 0) >= 5) {
+        results.gameOver = true;
+        results.winner = 1 - i;
+        results.details.push('Player ' + i + ' HQ occupied for 5 turns');
+      }
+    });
+    return results;
+  }
+
+  function _tiebreakWinner(state) {
+    const hp0 = state.players[0].hqHp;
+    const hp1 = state.players[1].hqHp;
+    if (hp0 > hp1) return 0;
+    if (hp1 > hp0) return 1;
+    return -1;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  //  BUILT-IN CLAUDE API — claude.ai Artifact proxy pattern
+  //  No API key needed. When this Artifact runs on claude.ai, the
+  //  platform proxies fetch calls to api.anthropic.com and authenticates
+  //  them with the host's session. Uses the host's Pro plan.
+  // ═══════════════════════════════════════════════════════════════════
+
+  var _apiUsage = { inputTokens: 0, outputTokens: 0, requests: 0 };
+
+  function _buildBoardPrompt(gameState) {
+    var engineAnalysis = null;
+    try { engineAnalysis = window.analyzeGameState(gameState); } catch (e) {}
+
+    var pi = gameState.activePlayer;
+    var p = gameState.players[pi];
+    var opp = gameState.players[1 - pi];
+
+    var lines = ['Turn ' + gameState.turnNumber + ', Player ' + pi + ' (' + p.doctrine + ') to act.'];
+    lines.push('');
+    lines.push('YOUR ARMY (' + p.doctrine + ') — HQ HP:' + p.hqHp + '/20 at (' + (p.hqPosition ? p.hqPosition.row + ',' + p.hqPosition.col : '?') + ')');
+    p.units.forEach(function (u) {
+      var rank = u.level > 0 ? ' L' + u.level : '';
+      var hp = u.currentHp != null ? u.currentHp : '?';
+      var acts = u.actionsRemaining != null ? u.actionsRemaining : 2;
+      var flags = '';
+      if (u.trenchTurns >= 3) flags += ' TRENCH';
+      if (u.stillTurns > 0) flags += ' STILL(' + u.stillTurns + ')';
+      lines.push('  ' + u.id + ': ' + u.type + rank + ' (' + u.row + ',' + u.col + ') ' + u.facing + ' HP:' + hp + ' Act:' + acts + flags);
+    });
+    lines.push('');
+    lines.push('ENEMY (' + opp.doctrine + ') — HQ HP:' + opp.hqHp + '/20 at (' + (opp.hqPosition ? opp.hqPosition.row + ',' + opp.hqPosition.col : '?') + ')');
+    opp.units.forEach(function (u) {
+      var rank = u.level > 0 ? ' L' + u.level : '';
+      var hp = u.currentHp != null ? u.currentHp : '?';
+      lines.push('  ' + u.id + ': ' + u.type + rank + ' (' + u.row + ',' + u.col + ') ' + u.facing + ' HP:' + hp);
+    });
+
+    if (engineAnalysis && engineAnalysis.threatAssessment && engineAnalysis.threatAssessment.length > 0) {
+      lines.push('');
+      lines.push('THREATS: ' + engineAnalysis.threatAssessment.map(function (t) {
+        return t.unit.type + ' at dist ' + t.distanceToHq + (t.inHqReach ? ' IN HQ REACH' : '');
+      }).join('; '));
+    }
+
+    lines.push('');
+    lines.push('Board: ' + (gameState.board.rows || 12) + 'x' + (gameState.board.cols || 11) + ' (0=grass,1=swamp,2=forest,3=mountain)');
+    return lines.join('\n');
+  }
+
+  /**
+   * Call Claude Sonnet directly from the Artifact.
+   * Uses the claude.ai Artifact proxy — no API key required.
+   * The host's Pro subscription covers the cost.
+   *
+   * @param {Object} gameState - full game state
+   * @param {Object} [options] - { question, maxTokens }
+   * @returns {Promise<Object>} - Claude's strategic response
+   */
+  window.thinkWithClaude = async function (gameState, options) {
+    _log('thinkWithClaude called');
+
+    var boardPrompt = _buildBoardPrompt(gameState);
+    var userMsg = (options && options.question)
+      ? boardPrompt + '\n\nSPECIFIC QUESTION: ' + options.question
+      : boardPrompt + '\n\nWhat is the single best action for the active player? Respond JSON only.';
+
+    var maxTokens = (options && options.maxTokens) || 1024;
+
+    var systemPrompt = 'You are a WWII strategy game tactical advisor. Analyze the board and recommend the single best action.\n\n'
+      + 'RULES: Square grid, 8-dir movement, IGOUGO, 2 actions/unit/turn. Win = capture enemy HQ (5-turn occupy within 3-sq reach OR 20 damage).\n'
+      + 'Units: Infantry(HP4,s1,d0), Cavalry(HP3,s0.5,d1,reach2), Tanks(HP8,s3,d3,reach4o/3d), Motorized(HP6,s2,d1), Artillery(HP2,s3,d0.5,reach6).\n'
+      + 'Combat: 1d6+str+bonuses - def-bonuses, min dmg 1. Side+1 swing, Rear+2, Encircle+5 (ortho only). Artillery=no positional tactics.\n'
+      + 'Terrain: grass(0), swamp(+1def light), forest(+1.5def,-1move), mountain(+2def,inf/cav only,-1atk).\n'
+      + 'Trench: 3 turns still=+2def(inf)/+1.5(cav). Doctrines: Blitzkrieg(tanks lose -1def/still turn), SF(art range12,falloff>8), Plain(vanilla).\n'
+      + 'Facing: N/E/S/W, front3/side2/rear3. Free rotation. Ranks: Corporal/Captain/Colonel.\n\n'
+      + 'RESPOND WITH VALID JSON ONLY:\n'
+      + '{"assessment":"1-2 sentences","recommendation":{"action":"move|attack|rotate|end_turn","unitId":"id","target":"id or {row,col}","reasoning":"why"},"alternatives":[{"action":"...","unitId":"...","reasoning":"..."}],"strategicNotes":["observations"],"riskLevel":"low|medium|high|critical"}';
+
+    try {
+      var response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: maxTokens,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userMsg }]
+        })
+      });
+
+      if (!response.ok) {
+        var errBody = await response.json().catch(function () { return {}; });
+        return { error: 'api_error', status: response.status, details: errBody };
+      }
+
+      var data = await response.json();
+      var text = (data.content || []).filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('').trim();
+
+      var usage = {
+        inputTokens: (data.usage && data.usage.input_tokens) || 0,
+        outputTokens: (data.usage && data.usage.output_tokens) || 0
+      };
+      _apiUsage.inputTokens += usage.inputTokens;
+      _apiUsage.outputTokens += usage.outputTokens;
+      _apiUsage.requests++;
+
+      var parsed = null;
+      try {
+        var jsonMatch = text.match(/\{[\s\S]*\}/);
+        parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+      } catch (e) { parsed = null; }
+
+      var result = {
+        source: 'artifact_proxy',
+        model: 'claude-sonnet-4-20250514',
+        response: parsed || { raw: text },
+        usage: usage,
+        billing: 'covered by host Pro subscription',
+        sessionUsage: { inputTokens: _apiUsage.inputTokens, outputTokens: _apiUsage.outputTokens, requests: _apiUsage.requests }
+      };
+
+      _showDecision(result);
+      _log('Claude responded — ' + usage.inputTokens + ' in / ' + usage.outputTokens + ' out');
+      return result;
+    } catch (err) {
+      _log('API error: ' + err.message);
+      return { error: 'fetch_failed', message: err.message };
+    }
+  };
+
+  /**
+   * Get cumulative API usage stats for this session.
+   */
+  window.getApiUsage = function () {
+    return {
+      inputTokens: _apiUsage.inputTokens,
+      outputTokens: _apiUsage.outputTokens,
+      requests: _apiUsage.requests,
+      billing: 'covered by host Pro subscription'
+    };
+  };
+
+  /**
+   * Health check — used by the Node bridge to verify the Artifact is loaded.
+   */
+  window.engineReady = function () {
+    return {
+      status: 'ready',
+      version: '1.2.0',
+      apiBuiltIn: true,
+      functions: [
+        'validateGameState','analyzeGameState','resolveCombat','getLegalMoves',
+        'getAttackTargets','executeMove','rotateUnit','getNextStrategicAction',
+        'endTurn','thinkWithClaude','getApiUsage'
+      ]
+    };
+  };
+
+  _log('Orchestration Engine loaded (claude.ai proxy API — no key needed)');
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HQ // Engagement Sandbox — Field Command Desk</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+
+<style>
+  /* ==========================================================
+     Field Command Desk — 2-player engagement sandbox
+     Visual vocabulary lifted from the original game's styles.css
+     ========================================================== */
+  :root {
+    --ink:         #2a1f17;
+    --ink-dark:    #1a1208;
+    --paper:       #efe2c4;
+    --paper-dark:  #d9c79c;
+    --paper-light: #f7ecd0;
+    --teal:        #6fd3d6;
+    --red:         #b22b2b;
+    --red-deep:    #7a1c1c;
+    --olive:       #6b4e2a;
+    --olive-dk:    #4a3820;
+    --blue:        #2c4d8a;
+    --green:       #4a7a3a;
+    --wood-dark:   #2c1d10;
+    --wood-mid:    #4a3220;
+    --wood-light:  #5d4128;
+    --rust:        #8b3218;
+    --parchment:   #e8d8b0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Courier Prime', 'Courier New', monospace;
+    color: #fff;
+    user-select: none;
+    background: var(--wood-dark);
+  }
+
+  /* Wood-grain desk background */
+  body {
+    background:
+      radial-gradient(ellipse 600px 200px at 18% 22%, rgba(0,0,0,0.35), transparent 70%),
+      radial-gradient(ellipse 700px 220px at 82% 78%, rgba(0,0,0,0.30), transparent 70%),
+      repeating-linear-gradient(
+        90deg,
+        rgba(255,210,150,0.025) 0 2px,
+        rgba(0,0,0,0.06)        2px 6px,
+        rgba(255,210,150,0.018) 6px 14px,
+        rgba(0,0,0,0.05)        14px 22px
+      ),
+      linear-gradient(180deg, #3a2614 0%, #2a1d10 50%, #1d1208 100%);
+  }
+
+  /* Faint glow artifacts at the corners */
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    width: 380px; height: 380px;
+    opacity: 0.45;
+    z-index: 0;
+    mix-blend-mode: screen;
+  }
+  body::before {
+    top: -90px; left: -90px;
+    background: radial-gradient(circle at 50% 50%, rgba(111,211,214,0.10), transparent 65%);
+  }
+  body::after {
+    bottom: -90px; right: -90px;
+    background: radial-gradient(circle at 50% 50%, rgba(178,43,43,0.10), transparent 65%);
+  }
+
+  /* ── Top command bar ─────────────────────────────────────── */
+  #load-bar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 18px;
+    background: linear-gradient(180deg, #161009 0%, #0c0805 100%);
+    border-bottom: 1px solid #000;
+    box-shadow:
+      inset 0 -1px 0 rgba(111, 211, 214, 0.15),
+      0 4px 18px rgba(0,0,0,0.6);
+    color: var(--teal);
+    font-family: 'VT323', monospace;
+    letter-spacing: 2px;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  #load-bar .bar-title {
+    color: var(--teal);
+    text-shadow: 0 0 8px rgba(111, 211, 214, 0.6);
+    padding-right: 12px;
+    border-right: 1px solid rgba(111, 211, 214, 0.3);
+    white-space: nowrap;
+  }
+  #load-bar .bar-meta { color: #d9e8e9; font-size: 14px; opacity: 0.8; }
+  #load-bar > * { flex-shrink: 0; }
+  #load-bar .bar-spacer { flex: 1; flex-shrink: 1; }
+  #load-bar .bar-pill {
+    color: var(--paper);
+    border: 1px solid var(--teal);
+    background: rgba(111, 211, 214, 0.08);
+    padding: 3px 10px;
+    font-family: 'Special Elite', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+  #load-bar .bar-status {
+    color: var(--teal);
+    font-size: 14px;
+  }
+  #load-bar .blink-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    background: var(--teal);
+    box-shadow: 0 0 8px var(--teal);
+    margin-right: 6px;
+    animation: blink 1.4s steps(2,end) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ── Stage ───────────────────────────────────────────────── */
+  #stage {
+    position: relative;
+    z-index: 1;
+    height: calc(100vh - 45px);
+    width: 100vw;
+    overflow: hidden;
+    padding: 18px 22px;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: minmax(560px, 1fr) 360px;
+    gap: 22px;
+    height: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+
+  /* ── Paper-card base (the matted-frame look) ─────────────── */
+  .paper {
+    position: relative;
+    background:
+      repeating-linear-gradient(0deg, rgba(120,90,40,0.05) 0 2px, transparent 2px 5px),
+      radial-gradient(ellipse at top left,  rgba(150,100,30,0.10), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(80,40,10,0.12), transparent 60%),
+      var(--paper);
+    border: 2px solid var(--ink);
+    box-shadow:
+      0 0 0 4px var(--paper-dark),
+      0 0 0 6px var(--ink),
+      0 18px 38px rgba(0,0,0,0.55);
+    color: var(--ink);
+  }
+  .paper-strong {
+    box-shadow:
+      0 0 0 6px var(--paper-dark),
+      0 0 0 8px var(--ink),
+      0 24px 50px rgba(0,0,0,0.6);
+  }
+  /* coffee ring stain */
+  .stain-ring {
+    position: absolute;
+    background:
+      radial-gradient(circle 60px at 50% 50%, transparent 50%, rgba(70,40,10,0.18) 52%, transparent 60%),
+      radial-gradient(circle 90px at 50% 50%, rgba(120,80,30,0.18), transparent 70%);
+    pointer-events: none;
+    width: 180px; height: 180px;
+    top: -20px; right: 30px;
+  }
+
+  /* ── Field-map panel ─────────────────────────────────────── */
+  .field-map {
+    padding: 16px 18px 12px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .field-map .map-cap {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--olive);
+  }
+  .field-map .map-cap h3 {
+    font-family: 'Special Elite', monospace;
+    font-size: 20px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+  .field-map .map-cap .map-coord {
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--red);
+    letter-spacing: 1px;
+  }
+
+  /* Turn strip — like a rubber-stamped header */
+  .turn-strip {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 12px;
+    background: var(--paper-light);
+    border: 1px solid var(--ink);
+    margin-bottom: 10px;
+    font-family: 'VT323', monospace;
+    font-size: 17px;
+    letter-spacing: 1px;
+    color: var(--ink);
+  }
+  .turn-strip .pl-stamp {
+    font-family: 'Special Elite', monospace;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--paper);
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border: 2px solid var(--ink);
+    transform: rotate(-2deg);
+    background: var(--blue);
+    box-shadow: 0 1px 0 var(--ink);
+  }
+  .turn-strip .pl-stamp.p2 { background: var(--red); transform: rotate(2deg); }
+  .turn-strip .actions { flex: 1; color: var(--olive); }
+  .turn-strip .nb { color: var(--red); font-weight: 700; }
+  .turn-strip .cmd-tag {
+    font-family: 'Special Elite', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: var(--ink);
+  }
+
+  /* Board */
+  .board-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    position: relative;
+    padding: 6px 0;
+  }
+  .board {
+    --cell: 62px;
+    display: grid;
+    grid-template-columns: repeat(8, var(--cell));
+    grid-template-rows:    repeat(8, var(--cell));
+    border: 1px solid var(--ink);
+    box-shadow:
+      0 0 0 2px var(--paper-dark),
+      0 0 0 3px var(--ink),
+      inset 0 0 32px rgba(60,40,15,0.35);
+    transition: transform 0.7s cubic-bezier(.4,.0,.2,1);
+  }
+  .cell {
+    position: relative;
+    width: var(--cell);
+    height: var(--cell);
+    border: 1px solid rgba(40, 25, 10, 0.32);
+    cursor: pointer;
+    overflow: hidden;
+    background-color: #c8b88a;
+  }
+
+  /* Terrain — drawn entirely with CSS so no asset deps */
+  .cell.plain {
+    background:
+      radial-gradient(circle at 30% 40%, rgba(74,122,58,0.35) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 70% 60%, rgba(74,122,58,0.30) 0 1.5px, transparent 2px),
+      radial-gradient(circle at 50% 80%, rgba(74,122,58,0.25) 0 1.5px, transparent 2px),
+      linear-gradient(135deg, #c5b683 0%, #b9a974 100%);
+  }
+  .cell.forest {
+    background:
+      radial-gradient(circle 7px at 25% 35%, #3f6b3a 60%, transparent 70%),
+      radial-gradient(circle 5px at 55% 25%, #3f6b3a 60%, transparent 70%),
+      radial-gradient(circle 8px at 70% 60%, #2f5b2a 60%, transparent 70%),
+      radial-gradient(circle 6px at 35% 75%, #3f6b3a 60%, transparent 70%),
+      radial-gradient(circle 5px at 80% 80%, #2f5b2a 60%, transparent 70%),
+      linear-gradient(135deg, #97a26a 0%, #889560 100%);
+  }
+  .cell.mountain {
+    background:
+      linear-gradient(135deg, #a89970 0%, #8a7c5a 100%);
+  }
+  .cell.mountain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      /* peak 1 */
+      linear-gradient(45deg, transparent 40%, #6b5a3a 41% 43%, transparent 44%),
+      linear-gradient(-45deg, transparent 40%, #4a3f2a 41% 43%, transparent 44%),
+      /* hatch shading */
+      repeating-linear-gradient(135deg,
+        transparent 0 4px,
+        rgba(40,25,10,0.10) 4px 5px);
+    pointer-events: none;
+  }
+  .cell.mountain::before {
+    content: "";
+    position: absolute;
+    left: 15%; right: 15%; bottom: 22%;
+    height: 0;
+    border-style: solid;
+    border-width: 0 18px 26px 18px;
+    border-color: transparent transparent #6b5a3a transparent;
+    filter: drop-shadow(2px 2px 0 rgba(40,25,10,0.35));
+    z-index: 1;
+  }
+  .cell.swamp {
+    background:
+      repeating-linear-gradient(135deg,
+        rgba(58,107,74,0.40) 0 3px,
+        transparent 3px 7px),
+      radial-gradient(circle 4px at 30% 60%, rgba(40,60,40,0.55), transparent 70%),
+      radial-gradient(circle 5px at 70% 40%, rgba(40,60,40,0.50), transparent 70%),
+      linear-gradient(135deg, #7a8e5a 0%, #647552 100%);
+  }
+
+  /* Paper tint over every tile */
+  .cell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(239, 226, 196, 0.10);
+    pointer-events: none;
+  }
+
+  /* legal move hint (teal) */
+  .cell.move-ok {
+    outline: 1.5px solid var(--teal);
+    outline-offset: -2px;
+    z-index: 2;
+  }
+  .cell.move-ok::after {
+    background:
+      radial-gradient(circle, rgba(111, 211, 214, 0.55), rgba(111, 211, 214, 0.20) 60%, transparent 75%);
+    animation: legal-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes legal-pulse {
+    0%, 100% { opacity: 0.85; }
+    50%      { opacity: 1; }
+  }
+  /* attack target hint (red) */
+  .cell.attack-ok {
+    outline: 1.5px solid var(--red);
+    outline-offset: -2px;
+    z-index: 2;
+  }
+  .cell.attack-ok::after {
+    background:
+      radial-gradient(circle, rgba(178, 43, 43, 0.50), rgba(178, 43, 43, 0.18) 60%, transparent 75%);
+    animation: legal-pulse 1.0s ease-in-out infinite;
+  }
+  /* selected */
+  .cell.selected {
+    z-index: 3;
+  }
+  .cell.selected::after {
+    background: rgba(255, 211, 74, 0.18);
+    outline: 1.5px solid #ffd34a;
+    outline-offset: -3px;
+    box-shadow: inset 0 0 0 1px #ffd34a, 0 0 8px rgba(255, 211, 74, 0.7);
+    animation: pulse-ring 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-ring {
+    0%, 100% { box-shadow: inset 0 0 0 1px #ffd34a, 0 0 6px rgba(255, 211, 74, 0.55); }
+    50%      { box-shadow: inset 0 0 0 1px #ffd34a, 0 0 14px rgba(255, 211, 74, 0.9); }
+  }
+  /* hit flash */
+  .cell.flash-hit::after {
+    background: rgba(178,43,43,0.5);
+    animation: hit-flash 0.5s ease-out;
+  }
+  @keyframes hit-flash {
+    0%   { background-color: rgba(178,43,43,0.8); }
+    100% { background-color: rgba(178,43,43,0); }
+  }
+
+  /* ── Compass rose ────────────────────────────────────────── */
+  .compass {
+    position: absolute;
+    top: 14px; right: 18px;
+    width: 50px; height: 50px;
+    font-family: 'VT323', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    pointer-events: none;
+    opacity: 0.85;
+    transition: transform 0.7s ease;
+    z-index: 5;
+  }
+  .compass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--ink);
+    border-radius: 50%;
+    background:
+      linear-gradient(45deg,  transparent 47%, var(--ink) 48% 52%, transparent 53%),
+      linear-gradient(135deg, transparent 47%, var(--ink) 48% 52%, transparent 53%),
+      var(--paper-light);
+  }
+  .compass span {
+    position: absolute;
+    background: var(--paper);
+    padding: 0 3px;
+    font-weight: 700;
+  }
+  .compass .n { top: -4px;    left: 50%; transform: translateX(-50%); }
+  .compass .s { bottom: -4px; left: 50%; transform: translateX(-50%); color: var(--red); }
+  .compass .e { right: -8px;  top: 50%;  transform: translateY(-50%); }
+  .compass .w { left: -9px;   top: 50%;  transform: translateY(-50%); }
+
+  /* ── Unit tokens (NATO-symbol, pure CSS) ─────────────────── */
+  .token {
+    position: absolute;
+    inset: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.7s ease;
+    z-index: 4;
+    pointer-events: none;
+  }
+  .token .frame {
+    position: relative;
+    width: 100%;
+    height: 70%;
+    border: 2px solid var(--ink);
+    background: var(--paper);
+    box-shadow:
+      0 2px 0 rgba(0,0,0,0.4),
+      inset 0 1px 0 rgba(255,255,255,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: unit-bob 2.4s ease-in-out infinite;
+  }
+  .token.p1 .frame { background: #b8c8e2; border-color: var(--blue); }
+  .token.p2 .frame { background: #e2b8b8; border-color: var(--red); }
+  .token.tnk .frame { animation: tank-rumble 3.0s ease-in-out infinite; }
+  .token.cav .frame { animation-duration: 1.8s; }
+  .token.art .frame { animation-duration: 3.4s; }
+  @keyframes unit-bob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-1.5px); }
+  }
+  @keyframes tank-rumble {
+    0%, 100% { transform: translateX(0)   translateY(0); }
+    25%      { transform: translateX(-0.5px) translateY(0.3px); }
+    75%      { transform: translateX(0.5px)  translateY(-0.3px); }
+  }
+
+  /* NATO symbols inside the frame */
+  .sym-infantry::before, .sym-infantry::after {
+    content:'';
+    position: absolute;
+    left: 8%; right: 8%; top: 50%;
+    height: 2px;
+    background: var(--ink);
+  }
+  .sym-infantry::before { transform: translateY(-50%) rotate(28deg); }
+  .sym-infantry::after  { transform: translateY(-50%) rotate(-28deg); }
+
+  .sym-cavalry::before {
+    content:'';
+    position: absolute;
+    left: 8%; right: 8%; top: 50%;
+    height: 2px;
+    background: var(--ink);
+    transform: translateY(-50%) rotate(-28deg);
+  }
+
+  .sym-tanks::before {
+    content:'';
+    position: absolute;
+    left: 22%; right: 22%;
+    top: 32%; bottom: 32%;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    background: rgba(0,0,0,0.04);
+  }
+
+  .sym-motorized::before {
+    content:'';
+    position: absolute;
+    left: 22%; right: 22%;
+    top: 32%; bottom: 32%;
+    border: 2px solid var(--ink);
+    border-radius: 1px;
+  }
+  .sym-motorized::after {
+    content:'';
+    position: absolute;
+    left: 47%; top: 47%;
+    width: 6px; height: 6px;
+    background: var(--ink);
+    border-radius: 50%;
+  }
+
+  .sym-artillery::before {
+    content:'';
+    position: absolute;
+    left: 32%; right: 32%;
+    top: 30%; bottom: 30%;
+    background: var(--ink);
+    border-radius: 50%;
+  }
+
+  /* Facing arrow */
+  .facing {
+    position: absolute;
+    width: 0; height: 0;
+    border-style: solid;
+    border-width: 0 5px 8px 5px;
+    border-color: transparent transparent var(--ink) transparent;
+    filter: drop-shadow(0 1px 0 rgba(255,255,255,0.4));
+  }
+  .face-N { top: -3px;    left: 50%; transform: translateX(-50%); }
+  .face-S { bottom: -3px; left: 50%; transform: translateX(-50%) rotate(180deg); }
+  .face-E { right: -3px;  top: 50%; transform: translateY(-50%) rotate(90deg); }
+  .face-W { left: -3px;   top: 50%; transform: translateY(-50%) rotate(-90deg); }
+
+  /* HP pips */
+  .hp-pips {
+    position: absolute;
+    bottom: -1px; left: 4px; right: 4px;
+    height: 5px;
+    display: flex;
+    gap: 1px;
+  }
+  .hp-pip {
+    flex: 1;
+    background: #2a6b3a;
+    border: 1px solid var(--ink);
+  }
+  .hp-pip.lost { background: var(--paper-dark); }
+
+  /* rank/level chip — bottom-right like rank-chip in original */
+  .lvl-pip {
+    position: absolute;
+    bottom: -2px; right: -2px;
+    font-size: 10px;
+    padding: 0 3px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'VT323', monospace;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--paper-dark);
+  }
+
+  /* trench badge */
+  .trench-pip {
+    position: absolute;
+    top: -5px; left: -5px;
+    font-size: 11px;
+    line-height: 14px;
+    width: 16px; height: 16px;
+    background: var(--green);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    text-align: center;
+    font-weight: 700;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+    font-family: 'VT323', monospace;
+  }
+
+  /* damage popup */
+  .dmg-pop {
+    position: absolute;
+    top: -8px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Special Elite', monospace;
+    font-size: 22px;
+    color: var(--red);
+    text-shadow: 1px 1px 0 var(--paper), 0 0 6px rgba(178,43,43,0.7);
+    pointer-events: none;
+    animation: dmgPop 1.1s ease-out forwards;
+    z-index: 10;
+  }
+  @keyframes dmgPop {
+    0%   { opacity: 0; transform: translate(-50%, 0) scale(0.6); }
+    20%  { opacity: 1; transform: translate(-50%, -12px) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -38px) scale(1); }
+  }
+
+  /* ── Right column: stacked dossier panels ─────────────────── */
+  aside {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  aside::-webkit-scrollbar { width: 8px; }
+  aside::-webkit-scrollbar-track { background: var(--paper-dark); }
+  aside::-webkit-scrollbar-thumb { background: var(--olive); border: 1px solid var(--ink); }
+
+  .panel { padding: 14px 16px 16px; }
+  .panel h3 {
+    font-family: 'Special Elite', monospace;
+    font-size: 16px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--ink);
+    margin-bottom: 10px;
+    color: var(--ink);
+  }
+  .panel h4 {
+    font-family: 'Special Elite', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin: 12px 0 6px;
+    padding-bottom: 3px;
+    border-bottom: 1px dashed var(--olive);
+  }
+  .panel h4:first-child { margin-top: 0; }
+  .panel .sub {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--olive);
+    letter-spacing: 1px;
+    line-height: 1.4;
+  }
+
+  /* Selection panel content */
+  .sel-row {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .sel-mini {
+    width: 48px; height: 48px;
+    background: var(--paper-light);
+    border: 2px solid var(--ink);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .sel-mini.p1 { background: #b8c8e2; border-color: var(--blue); }
+  .sel-mini.p2 { background: #e2b8b8; border-color: var(--red); }
+  .sel-title {
+    font-family: 'Special Elite', monospace;
+    font-size: 17px;
+    letter-spacing: 2px;
+    line-height: 1.1;
+  }
+  .sel-trench {
+    margin-left: 8px;
+    color: var(--green);
+    font-size: 14px;
+    font-family: 'VT323', monospace;
+  }
+  .sel-meta {
+    font-family: 'VT323', monospace;
+    color: var(--olive);
+    font-size: 14px;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 3px 10px;
+    align-items: center;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    letter-spacing: 1px;
+    color: var(--ink);
+    padding: 8px 0;
+  }
+  .stat-grid .k { color: var(--olive); }
+  .stat-grid .v { text-align: right; color: var(--red); font-weight: 700; }
+  .stat-grid .v.muted { color: var(--ink); font-weight: normal; }
+
+  /* Stat indicator — typewriter pip bar on the left of each row */
+  .stat-bar {
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+    padding: 2px 3px;
+    background: rgba(107,90,62,0.07);
+    border: 1px solid var(--olive);
+  }
+  .stat-bar .pip {
+    width: 5px;
+    height: 11px;
+    background: var(--parchment);
+    border: 1px solid var(--olive);
+    box-sizing: border-box;
+  }
+  .stat-bar .pip.on { background: var(--ink); border-color: var(--ink); }
+  .stat-bar.hp     .pip.on { background: #2a6b3a; border-color: #1f4f2a; }
+  .stat-bar.str    .pip.on { background: var(--rust); border-color: #4a2418; }
+  .stat-bar.def    .pip.on { background: var(--blue); border-color: #102348; }
+  .stat-bar.reach  .pip.on { background: var(--olive-dk); border-color: var(--ink); }
+  .stat-bar.move   .pip.on { background: var(--ink); border-color: var(--ink); }
+  .stat-bar.still  .pip.on { background: var(--red); border-color: #4a1418; }
+
+  /* Action stamps */
+  .action-stamps {
+    display: flex;
+    gap: 6px;
+    margin: 8px 0 0;
+  }
+  .stamp {
+    flex: 1;
+    text-align: center;
+    padding: 6px 0;
+    font-family: 'Special Elite', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--red);
+    border: 2px dashed var(--red);
+    background: rgba(178,43,43,0.04);
+  }
+  .stamp.used {
+    color: var(--olive);
+    border-color: var(--olive);
+    background: transparent;
+    text-decoration: line-through;
+    opacity: 0.45;
+  }
+
+  /* Mode buttons */
+  .modes {
+    display: flex;
+    gap: 4px;
+    margin-top: 10px;
+  }
+  .modes button {
+    flex: 1;
+    font-family: 'Special Elite', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 8px 0;
+    border: 1px solid var(--ink);
+    background: var(--paper-light);
+    color: var(--ink);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .14s, color .14s, box-shadow .14s;
+  }
+  .modes button:hover:not(:disabled) {
+    background: #fff5d6;
+  }
+  .modes button.active {
+    background: var(--ink);
+    color: var(--teal);
+    box-shadow: inset 0 0 0 1px var(--teal), 0 0 10px rgba(111,211,214,0.35);
+  }
+  .modes button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+  .mode-hint {
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: var(--olive);
+    letter-spacing: 1px;
+    margin-top: 6px;
+    padding: 4px 8px;
+    background: rgba(111,211,214,0.06);
+    border-left: 2px solid var(--teal);
+  }
+
+  /* Combat log */
+  .log {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 120px;
+    max-height: 280px;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--ink);
+    letter-spacing: 0.5px;
+    padding-right: 4px;
+  }
+  .log::-webkit-scrollbar { width: 6px; }
+  .log::-webkit-scrollbar-thumb { background: var(--olive); }
+  .log-entry {
+    padding: 5px 8px;
+    border-left: 3px solid var(--olive);
+    margin-bottom: 4px;
+    background: var(--paper-light);
+  }
+  .log-entry.turn {
+    border-left-color: var(--ink);
+    background: var(--ink);
+    color: var(--teal);
+    font-family: 'Special Elite', monospace;
+    font-size: 12px;
+    letter-spacing: 3px;
+    text-align: center;
+    padding: 7px;
+    text-shadow: 0 0 6px rgba(111,211,214,0.4);
+  }
+  .log-entry.atk { border-left-color: var(--red); }
+  .log-entry.ctr { border-left-color: var(--red-deep); background: #ecd2c4; }
+  .log-entry.mv  { border-left-color: var(--green); }
+  .log-entry .detail {
+    font-size: 13px;
+    color: var(--olive);
+    margin-top: 2px;
+    font-family: 'Courier Prime', monospace;
+    letter-spacing: 0;
+  }
+
+  /* Action buttons row */
+  .action-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .action-row button {
+    flex: 1;
+    padding: 8px 8px;
+    font-family: 'Special Elite', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    background: var(--paper-light);
+    color: var(--ink);
+    border: 1px solid var(--ink);
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background .12s;
+  }
+  .action-row button:hover { background: #fff5d6; }
+  .action-row button.primary {
+    background: var(--ink);
+    color: var(--teal);
+    box-shadow: inset 0 0 0 1px var(--teal);
+  }
+  .action-row button.primary:hover {
+    background: #3a2c1f;
+    box-shadow: inset 0 0 0 1px var(--teal), 0 0 10px rgba(111,211,214,0.4);
+  }
+  .action-row button.danger { color: var(--red); }
+  .action-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Rules card */
+  .rules-card .rule-line {
+    font-family: 'Courier Prime', monospace;
+    font-size: 11px;
+    color: var(--ink);
+    padding: 3px 0;
+    line-height: 1.5;
+    border-bottom: 1px dotted rgba(107,78,42,0.25);
+  }
+  .rules-card .rule-line:last-child { border-bottom: none; }
+  .rules-card .rule-line b {
+    font-family: 'Special Elite', monospace;
+    color: var(--red);
+    letter-spacing: 1px;
+    margin-right: 4px;
+    font-size: 10px;
+  }
+
+  /* Map footer */
+  .map-foot {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'VT323', monospace;
+    font-size: 13px;
+    color: var(--olive);
+    letter-spacing: 1px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--olive);
+    margin-top: 8px;
+  }
+
+  /* Winner stamp overlay */
+  .winner {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+    backdrop-filter: blur(3px);
+  }
+  .winner .stamp-big {
+    background: var(--paper);
+    color: var(--ink);
+    border: 4px double var(--ink);
+    box-shadow:
+      0 0 0 8px var(--paper-dark),
+      0 0 0 10px var(--ink),
+      0 24px 60px rgba(0,0,0,0.7);
+    padding: 36px 60px;
+    font-family: 'Special Elite', monospace;
+    text-align: center;
+    letter-spacing: 6px;
+    transform: rotate(-3deg);
+  }
+  .winner .stamp-big h2 {
+    margin: 0 0 6px;
+    font-size: 52px;
+    color: var(--red);
+  }
+  .winner .stamp-big .pl {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    letter-spacing: 3px;
+    color: var(--ink);
+  }
+  .winner .stamp-big p {
+    margin: 12px 0 0;
+    font-family: 'Courier Prime', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: var(--olive);
+  }
+  .winner .stamp-big button {
+    margin-top: 18px;
+    font-family: 'Special Elite', monospace;
+    background: var(--ink);
+    color: var(--teal);
+    border: 1px solid var(--teal);
+    padding: 10px 24px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    box-shadow: 0 0 12px rgba(111,211,214,0.35);
+  }
+  .winner .stamp-big button:hover { background: #3a2c1f; }
+</style>
+</head>
+<body>
+
+  <!-- ── Top command bar ─────────────────────────── -->
+  <div id="load-bar">
+    <span class="bar-title">HQ // ENGAGEMENT SANDBOX</span>
+    <span class="bar-meta">FIELD CMD · v0.18</span>
+    <span class="bar-spacer"></span>
+    <span class="bar-pill" id="bar-doctrine">PLAIN DOCTRINE</span>
+    <span class="bar-status"><span class="blink-dot"></span>LIVE · SECTOR 06-N</span>
+  </div>
+
+  <!-- ── Stage ─────────────────────────── -->
+  <div id="stage">
+    <div id="root"></div>
+  </div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel">
+/* eslint-disable */
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+/* ─────────────────────────────────────────────────────────────────
+   UNIT DATA  (units_and_entities.md §2.1)
+   Artillery reach bumped to 10 so the SF-style range-falloff past 8
+   is observable in this sandbox.
+   ───────────────────────────────────────────────────────────────── */
+const UNIT_STATS = {
+  Infantry:  { hp: 4, movement: { ortho: 2, diag: 1 }, reach: 1,  strength: 1,   defense: 0,   light: true,  trench: true  },
+  Cavalry:   { hp: 3, movement: { ortho: 2, diag: 2 }, reach: 2,  strength: 0.5, defense: 1,   light: true,  trench: true  },
+  Tanks:     { hp: 8, movement: { ortho: 3, diag: 0 }, reach: 4,  strength: 3,   defense: 3,   light: false, trench: false },
+  Motorized: { hp: 6, movement: { ortho: 3, diag: 2 }, reach: 3,  strength: 2,   defense: 1,   light: false, trench: false },
+  Artillery: { hp: 2, movement: { ortho: 1, diag: 1 }, reach: 10, strength: 3,   defense: 0.5, light: false, trench: false, ignoresTactics: true, hasFalloff: true },
+};
+const SHORT = { Infantry: 'INF', Cavalry: 'CAV', Tanks: 'TNK', Motorized: 'MOT', Artillery: 'ART' };
+const TRENCH_DEF = { Infantry: 2, Cavalry: 1.5 };
+
+/* Terrain rules — units_and_entities.md §2.5 */
+const TERRAIN_DEF = {
+  plain:    { Infantry: 0,   Cavalry: 0,   Tanks: 0,   Motorized: 0,   Artillery: 0   },
+  forest:   { Infantry: 1.5, Cavalry: 1.5, Tanks: 1.5, Motorized: 1.5, Artillery: 0   },
+  mountain: { Infantry: 2,   Cavalry: 2,   Tanks: 0,   Motorized: 0,   Artillery: 0   },
+  swamp:    { Infantry: 1,   Cavalry: 1,   Tanks: 0.5, Motorized: 0.5, Artillery: 1   },
+};
+const TERRAIN_ENTRY = {
+  plain:    () => true,
+  forest:   (type) => type !== 'Artillery',
+  mountain: (type) => type === 'Infantry' || type === 'Cavalry',
+  swamp:    () => true,
+};
+const TERRAIN_MOVE_PENALTY = {
+  forest: { Infantry: 1, Cavalry: 1, Tanks: 1, Motorized: 1, Artillery: 0 },
+  swamp:  { Infantry: 1, Cavalry: 1, Tanks: 0, Motorized: 0, Artillery: 1 },
+};
+const TERRAIN_LABEL = { plain:'GRASSLAND', forest:'FOREST', mountain:'MOUNTAIN', swamp:'SWAMP' };
+
+const BOARD = 8;
+
+/* Static terrain layout for this map */
+const TERRAIN = (() => {
+  const t = Array.from({length: BOARD}, () => Array(BOARD).fill('plain'));
+  [[2,2],[2,3],[3,2],[3,3],[2,4],[3,4]].forEach(([r,c]) => t[r][c] = 'forest');
+  [[4,5],[4,6],[5,5],[5,6]].forEach(([r,c]) => t[r][c] = 'mountain');
+  [[5,1],[6,1],[5,2]].forEach(([r,c]) => t[r][c] = 'swamp');
+  return t;
+})();
+
+function mkUnit(o) {
+  return {
+    facing: 'N', level: 1, actionsRemaining: 2,
+    turnsStill: 0, trenched: false, movedThisTurn: false,
+    ...o,
+    maxHp: o.hp,
+  };
+}
+function initialUnits() {
+  return [
+    mkUnit({ id:'p1-inf1', type:'Infantry',  player:1, row:7, col:0, facing:'N', hp:4 }),
+    mkUnit({ id:'p1-inf2', type:'Infantry',  player:1, row:7, col:1, facing:'N', hp:4 }),
+    mkUnit({ id:'p1-cav1', type:'Cavalry',   player:1, row:7, col:2, facing:'N', hp:3 }),
+    mkUnit({ id:'p1-tnk1', type:'Tanks',     player:1, row:7, col:3, facing:'N', hp:8 }),
+    mkUnit({ id:'p1-mot1', type:'Motorized', player:1, row:7, col:4, facing:'N', hp:6 }),
+    mkUnit({ id:'p1-art1', type:'Artillery', player:1, row:7, col:5, facing:'N', hp:2 }),
+    mkUnit({ id:'p1-inf3', type:'Infantry',  player:1, row:6, col:1, facing:'N', hp:4 }),
+    mkUnit({ id:'p1-cav2', type:'Cavalry',   player:1, row:6, col:4, facing:'N', hp:3 }),
+
+    mkUnit({ id:'p2-inf1', type:'Infantry',  player:2, row:0, col:7, facing:'S', hp:4 }),
+    mkUnit({ id:'p2-inf2', type:'Infantry',  player:2, row:0, col:6, facing:'S', hp:4 }),
+    mkUnit({ id:'p2-cav1', type:'Cavalry',   player:2, row:0, col:5, facing:'S', hp:3 }),
+    mkUnit({ id:'p2-tnk1', type:'Tanks',     player:2, row:0, col:4, facing:'S', hp:8 }),
+    mkUnit({ id:'p2-mot1', type:'Motorized', player:2, row:0, col:3, facing:'S', hp:6 }),
+    mkUnit({ id:'p2-art1', type:'Artillery', player:2, row:0, col:2, facing:'S', hp:2 }),
+    mkUnit({ id:'p2-inf3', type:'Infantry',  player:2, row:1, col:6, facing:'S', hp:4 }),
+    mkUnit({ id:'p2-cav2', type:'Cavalry',   player:2, row:1, col:3, facing:'S', hp:3 }),
+  ];
+}
+
+/* ─────── Geometry helpers ─────── */
+const cheb  = (r1,c1,r2,c2) => Math.max(Math.abs(r2-r1), Math.abs(c2-c1));
+const manh  = (r1,c1,r2,c2) => Math.abs(r2-r1) + Math.abs(c2-c1);
+const isDiag  = (r1,c1,r2,c2) => Math.abs(r2-r1) !== 0 && Math.abs(c2-c1) !== 0;
+const isOrtho = (r1,c1,r2,c2) => (r1===r2 && c1!==c2) || (c1===c2 && r1!==r2);
+const isOrthoNeighbor = (r1,c1,r2,c2) => manh(r1,c1,r2,c2) === 1;
+
+/* Movement legality — terrain-aware (units_and_entities.md §2.5) */
+function canMoveTo(unit, tr, tc, units) {
+  if (tr<0||tr>=BOARD||tc<0||tc>=BOARD) return false;
+  if (units.find(u => u.row===tr && u.col===tc)) return false;
+  const dest = TERRAIN[tr][tc];
+  if (!TERRAIN_ENTRY[dest](unit.type)) return false;
+
+  const stats = UNIT_STATS[unit.type];
+  const dr = Math.abs(tr-unit.row), dc = Math.abs(tc-unit.col);
+
+  /* Swamp special override for artillery: 1 square 8-direction only */
+  if (unit.type === 'Artillery' && dest === 'swamp') {
+    return Math.max(dr,dc) === 1;
+  }
+
+  let orthoMax = stats.movement.ortho;
+  let diagMax  = stats.movement.diag;
+  const pen = TERRAIN_MOVE_PENALTY[dest]?.[unit.type] || 0;
+  if (pen) { orthoMax = Math.max(0, orthoMax - pen); diagMax = Math.max(0, diagMax - pen); }
+
+  if (isDiag(unit.row, unit.col, tr, tc))  return Math.max(dr,dc) <= diagMax;
+  if (isOrtho(unit.row, unit.col, tr, tc)) return (dr + dc) <= orthoMax;
+  return false;
+}
+
+function canAttack(attacker, target) {
+  if (attacker.player === target.player) return false;
+  const stats = UNIT_STATS[attacker.type];
+  return cheb(attacker.row, attacker.col, target.row, target.col) <= stats.reach;
+}
+
+/* Direction relative to defender's facing (combat.md §6.2) */
+function getAttackDirection(attacker, defender) {
+  const dr = attacker.row - defender.row;
+  const dc = attacker.col - defender.col;
+  const F = { N:{r:-1,c:0}, S:{r:1,c:0}, E:{r:0,c:1}, W:{r:0,c:-1} }[defender.facing];
+  const magA = Math.hypot(F.r, F.c);
+  const magB = Math.hypot(dr, dc) || 1;
+  const dot  = (F.r*dr + F.c*dc) / (magA*magB);
+  const ang  = Math.acos(Math.max(-1,Math.min(1, dot))) * 180/Math.PI;
+  if (ang <= 45)  return 'front';
+  if (ang >= 135) return 'rear';
+  return 'side';
+}
+
+/* Encirclement: defender's 4 orthogonal neighbors are all enemies (combat.md §5.5) */
+function isEncircled(defender, units) {
+  const enemy = (r,c) => {
+    const u = units.find(x => x.row===r && x.col===c);
+    return u && u.player !== defender.player;
+  };
+  return enemy(defender.row-1, defender.col)
+      && enemy(defender.row+1, defender.col)
+      && enemy(defender.row, defender.col-1)
+      && enemy(defender.row, defender.col+1);
+}
+
+/* Double attack: another friendly is orthogonally adjacent to defender (combat.md §5.2) */
+function hasDoubleAttack(attacker, defender, units) {
+  return units.some(u =>
+    u.player === attacker.player &&
+    u.id !== attacker.id &&
+    isOrthoNeighbor(u.row, u.col, defender.row, defender.col)
+  );
+}
+
+/* Effective defense including terrain + trench */
+function effectiveDefense(defender) {
+  const base = UNIT_STATS[defender.type].defense;
+  const terr = TERRAIN_DEF[ TERRAIN[defender.row][defender.col] ][defender.type] || 0;
+  const tr   = defender.trenched ? (TRENCH_DEF[defender.type] || 0) : 0;
+  return { base, terr, tr, total: base + terr + tr };
+}
+
+/* Resolve an attack — returns a structured report */
+function rollAttack(attacker, defender, units) {
+  const aStats = UNIT_STATS[attacker.type];
+  const direction = getAttackDirection(attacker, defender);
+  const roll = Math.floor(Math.random()*6) + 1;
+
+  let strMods = [];
+  let strBonus = 0;
+  const ignoresTactics = !!aStats.ignoresTactics;
+  const orthoAttack = isOrthoNeighbor(attacker.row, attacker.col, defender.row, defender.col);
+
+  if (!ignoresTactics) {
+    if (direction === 'side') { strBonus += 0.5; strMods.push('SIDE +0.5'); }
+    if (direction === 'rear') { strBonus += 1;   strMods.push('REAR +1');   }
+    if (hasDoubleAttack(attacker, defender, units)) {
+      strBonus += 1; strMods.push('DOUBLE +1');
+    }
+    if (orthoAttack && isEncircled(defender, units)) {
+      strBonus += 3; strMods.push('ENCIRCLE +3');
+    }
+    const aTerr = TERRAIN[attacker.row][attacker.col];
+    if (aTerr === 'forest') { strBonus += 1; strMods.push('FOREST +1'); }
+    if (aTerr === 'mountain') { strBonus -= 1; strMods.push('MOUNTAIN −1'); }
+  }
+
+  let falloff = 0;
+  if (aStats.hasFalloff) {
+    const dist = cheb(attacker.row, attacker.col, defender.row, defender.col);
+    if (dist > 8) { falloff = -0.5; strMods.push('FALLOFF (R'+dist+') −0.5'); strBonus -= 0.5; }
+  }
+
+  const defEff = effectiveDefense(defender);
+  let defBonus = 0;
+  const defMods = [];
+  if (defEff.terr > 0) defMods.push(TERRAIN_LABEL[TERRAIN[defender.row][defender.col]] + ' +' + defEff.terr);
+  if (defEff.tr  > 0) defMods.push('TRENCH +' + defEff.tr);
+  if (!ignoresTactics) {
+    if (direction === 'side') { defBonus -= 0.5; defMods.push('SIDE −0.5'); }
+    if (direction === 'rear') { defBonus -= 1;   defMods.push('REAR −1');   }
+    if (orthoAttack && isEncircled(defender, units)) {
+      defBonus -= 2; defMods.push('ENCIRCLE −2');
+    }
+  }
+
+  const atkPwr = roll + aStats.strength + strBonus;
+  const defVal = defEff.total + defBonus;
+  const damage = Math.max(1, Math.floor(atkPwr - defVal));
+
+  return { roll, direction, strBonus, defBonus, atkPwr, defVal, damage, strMods, defMods, ignoresTactics };
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   COMPONENTS
+   ───────────────────────────────────────────────────────────────── */
+const KIND_CLASS = { Infantry:'inf', Cavalry:'cav', Tanks:'tnk', Motorized:'mot', Artillery:'art' };
+
+function Pips({ kind, value, max, pipCount = 6 }) {
+  const clamped = Math.max(0, Math.min(value, max));
+  const filled  = max <= 0 ? 0 : Math.round((clamped / max) * pipCount);
+  const arr = [];
+  for (let i = 0; i < pipCount; i++) {
+    arr.push(<span key={i} className={`pip ${i < filled ? 'on' : ''}`} />);
+  }
+  return <div className={`stat-bar ${kind}`}>{arr}</div>;
+}
+
+function UnitToken({ unit, counterRot, shake }) {
+  const pips = [];
+  for (let i = 0; i < unit.maxHp; i++) {
+    pips.push(<span key={i} className={`hp-pip ${i >= unit.hp ? 'lost' : ''}`} />);
+  }
+  return (
+    <div className={`token p${unit.player} ${KIND_CLASS[unit.type]} ${shake ? 'shake' : ''}`}
+         style={{ transform: `rotate(${counterRot}deg)` }}>
+      <div className="frame">
+        <div className={`sym-${unit.type.toLowerCase()}`} style={{ position:'absolute', inset: 0 }} />
+        <div className={`facing face-${unit.facing}`} />
+        {unit.trenched && <span className="trench-pip" title="Dug in">&#x26E8;</span>}
+        {unit.level > 1 && <span className="lvl-pip">L{unit.level}</span>}
+        <div className="hp-pips">{pips}</div>
+      </div>
+    </div>
+  );
+}
+
+function Cell({ row, col, terrain, unit, hint, selected, flash, counterRot, onClick, dmg }) {
+  const cls = [
+    'cell',
+    terrain !== 'plain' ? terrain : 'plain',
+    hint === 'move'   ? 'move-ok'   : '',
+    hint === 'attack' ? 'attack-ok' : '',
+    selected ? 'selected' : '',
+    flash ? 'flash-hit' : '',
+  ].filter(Boolean).join(' ');
+
+  return (
+    <div className={cls} onClick={onClick} title={TERRAIN_LABEL[terrain]}>
+      {unit && <UnitToken unit={unit} counterRot={counterRot} shake={flash} />}
+      {dmg != null && <div className="dmg-pop" style={{ transform: `translateX(-50%) rotate(${counterRot}deg)` }}>&minus;{dmg}</div>}
+    </div>
+  );
+}
+
+function Game() {
+  const [units, setUnits] = useState(initialUnits);
+  const [currentPlayer, setCurrentPlayer] = useState(1);
+  const [selectedId, setSelectedId] = useState(null);
+  const [mode, setMode] = useState('move');
+  const [log, setLog] = useState([{ kind: 'turn', text: '◆ PLAYER 1 — TURN 1 ◆' }]);
+  const [boardRot, setBoardRot] = useState(0);
+  const [flash, setFlash] = useState(null);
+  const [counterFlash, setCounterFlash] = useState(null);
+  const [winner, setWinner] = useState(null);
+  const [turnNo, setTurnNo] = useState(1);
+  const logRef = useRef(null);
+
+  const selected = units.find(u => u.id === selectedId) || null;
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [log]);
+
+  useEffect(() => {
+    const p1 = units.some(u => u.player === 1);
+    const p2 = units.some(u => u.player === 2);
+    if (!p1) setWinner(2);
+    else if (!p2) setWinner(1);
+  }, [units]);
+
+  const pushLog = (entry) => setLog(prev => [...prev, entry]);
+
+  function selectUnit(u) {
+    if (!u || u.player !== currentPlayer) return;
+    if (u.actionsRemaining <= 0) return;
+    setSelectedId(u.id);
+    setMode(canAttackAnything(u) ? mode : 'move');
+  }
+  function canAttackAnything(u) {
+    return units.some(t => t.player !== u.player && canAttack(u, t));
+  }
+
+  const hints = useMemo(() => {
+    const m = {};
+    if (!selected || selected.actionsRemaining <= 0) return m;
+    if (mode === 'move') {
+      for (let r = 0; r < BOARD; r++) for (let c = 0; c < BOARD; c++) {
+        if (canMoveTo(selected, r, c, units)) m[r+','+c] = 'move';
+      }
+    } else if (mode === 'attack') {
+      units.forEach(t => {
+        if (t.player !== selected.player && canAttack(selected, t)) {
+          m[t.row+','+t.col] = 'attack';
+        }
+      });
+    }
+    return m;
+  }, [selected, mode, units]);
+
+  function handleCell(r, c) {
+    if (winner) return;
+    const occ = units.find(u => u.row === r && u.col === c);
+
+    if (!selected) { if (occ) selectUnit(occ); return; }
+    if (occ && occ.id === selected.id) { setSelectedId(null); return; }
+    if (occ && occ.player === currentPlayer) { selectUnit(occ); return; }
+
+    if (mode === 'rotate') {
+      const dr = r - selected.row, dc = c - selected.col;
+      if (dr === 0 && dc === 0) return;
+      let f = selected.facing;
+      if (Math.abs(dr) > Math.abs(dc)) f = dr < 0 ? 'N' : 'S';
+      else                              f = dc < 0 ? 'W' : 'E';
+      setUnits(prev => prev.map(u => u.id === selected.id ? { ...u, facing: f } : u));
+      pushLog({ kind:'mv', text: SHORT[selected.type]+' P'+selected.player+' rotates to '+f+' (free).' });
+      return;
+    }
+
+    if (mode === 'attack' && occ && occ.player !== currentPlayer) {
+      if (!canAttack(selected, occ)) return;
+      doAttack(selected, occ);
+      return;
+    }
+
+    if (mode === 'move' && !occ && canMoveTo(selected, r, c, units)) {
+      doMove(selected, r, c);
+      return;
+    }
+  }
+
+  function doMove(unit, tr, tc) {
+    const dr = tr - unit.row, dc = tc - unit.col;
+    let f = unit.facing;
+    if (Math.abs(dr) >= Math.abs(dc)) f = dr < 0 ? 'N' : (dr > 0 ? 'S' : f);
+    else                              f = dc < 0 ? 'W' : (dc > 0 ? 'E' : f);
+
+    setUnits(prev => prev.map(u =>
+      u.id === unit.id
+        ? { ...u, row: tr, col: tc, facing: f, actionsRemaining: u.actionsRemaining - 1,
+            turnsStill: 0, trenched: false, movedThisTurn: true }
+        : u
+    ));
+    const lostTrench = unit.trenched ? ' (trench abandoned)' : '';
+    pushLog({
+      kind: 'mv',
+      text: SHORT[unit.type]+' P'+unit.player+' ▸ ('+unit.row+','+unit.col+') → ('+tr+','+tc+') on '+TERRAIN_LABEL[TERRAIN[tr][tc]]+lostTrench+'.'
+    });
+
+    setTimeout(() => {
+      setUnits(curr => {
+        const updated = curr.find(u => u.id === unit.id);
+        if (updated && updated.actionsRemaining <= 0) setSelectedId(null);
+        return curr;
+      });
+    }, 0);
+  }
+
+  function counterAttack(originalAttacker, defender, units) {
+    if (defender.actionsRemaining <= 0) return units;
+    if (!canAttack(defender, originalAttacker)) return units;
+
+    const r = rollAttack(defender, originalAttacker, units);
+    const newHp = Math.max(0, originalAttacker.hp - r.damage);
+
+    setCounterFlash({ row: originalAttacker.row, col: originalAttacker.col, dmg: r.damage, unitId: originalAttacker.id });
+    setTimeout(() => setCounterFlash(null), 1100);
+
+    pushLog({
+      kind: 'ctr',
+      text: '↩ '+SHORT[defender.type]+' P'+defender.player+' counter-attacks '+SHORT[originalAttacker.type]+' P'+originalAttacker.player+' ('+r.direction.toUpperCase()+')',
+      detail: detailLine(defender, originalAttacker, r, newHp)
+    });
+
+    let next = units.map(u =>
+      u.id === originalAttacker.id ? { ...u, hp: newHp } : u
+    );
+    next = next.filter(u => u.hp > 0);
+    return next;
+  }
+
+  function detailLine(attacker, defender, r, newHp) {
+    const aStr = UNIT_STATS[attacker.type].strength;
+    const defE = effectiveDefense(defender);
+    const sM = r.strMods.length ? ' [' + r.strMods.join(', ') + ']' : '';
+    const dM = r.defMods.length ? ' [' + r.defMods.join(', ') + ']' : '';
+    return '🎲'+r.roll+' + str '+aStr+sM+' = '+r.atkPwr.toFixed(1)+' vs def '+defE.total+dM+' = '+r.defVal.toFixed(1)+' → −'+r.damage+' HP'+(newHp===0 ? ' ☠ KIA' : ' ('+defender.hp+'→'+newHp+')');
+  }
+
+  function doAttack(attacker, defender) {
+    const r = rollAttack(attacker, defender, units);
+    const newHp = Math.max(0, defender.hp - r.damage);
+
+    setFlash({ row: defender.row, col: defender.col, dmg: r.damage, unitId: defender.id });
+    setTimeout(() => setFlash(null), 1100);
+
+    pushLog({
+      kind: 'atk',
+      text: SHORT[attacker.type]+' P'+attacker.player+' attacks '+SHORT[defender.type]+' P'+defender.player+' ('+r.direction.toUpperCase()+')',
+      detail: detailLine(attacker, defender, r, newHp)
+    });
+
+    setUnits(prev => {
+      let next = prev.map(u => {
+        if (u.id === defender.id) return { ...u, hp: newHp };
+        if (u.id === attacker.id) return { ...u, actionsRemaining: u.actionsRemaining - 1 };
+        return u;
+      });
+      next = next.filter(u => u.hp > 0);
+
+      const defAlive = next.find(u => u.id === defender.id);
+      const atkAlive = next.find(u => u.id === attacker.id);
+      if (defAlive && atkAlive) {
+        next = counterAttack(atkAlive, defAlive, next);
+      }
+      return next;
+    });
+
+    setTimeout(() => {
+      setUnits(curr => {
+        const upd = curr.find(u => u.id === attacker.id);
+        if (!upd || upd.actionsRemaining <= 0) setSelectedId(null);
+        else if (!canAttackAnything(upd)) setMode('move');
+        return curr;
+      });
+    }, 0);
+  }
+
+  function endTurn() {
+    const next = currentPlayer === 1 ? 2 : 1;
+    const newlyTrenched = [];
+
+    setUnits(prev => prev.map(u => {
+      if (u.player === currentPlayer) {
+        const movedThisTurn = u.movedThisTurn;
+        const newStill = movedThisTurn ? 0 : (u.turnsStill + 1);
+        const onSwamp  = TERRAIN[u.row][u.col] === 'swamp';
+        const canTrench = UNIT_STATS[u.type].trench && !onSwamp;
+        const trenched = canTrench && newStill >= 3;
+        if (trenched && !u.trenched) newlyTrenched.push(u);
+        return { ...u, turnsStill: newStill, trenched, movedThisTurn: false };
+      }
+      if (u.player === next) return { ...u, actionsRemaining: 2, movedThisTurn: false };
+      return u;
+    }));
+
+    newlyTrenched.forEach(u => {
+      pushLog({
+        kind: 'mv',
+        text: '⛈ '+SHORT[u.type]+' P'+u.player+' digs in at ('+u.row+','+u.col+') — trench bonus +'+TRENCH_DEF[u.type]+' def.'
+      });
+    });
+
+    setCurrentPlayer(next);
+    setSelectedId(null);
+    setMode('move');
+    setBoardRot(prev => (prev + 180) % 360);
+    setTurnNo(t => t + 1);
+    pushLog({ kind: 'turn', text: '◆ PLAYER '+next+' — TURN '+(turnNo + 1)+' ◆' });
+  }
+
+  function newGame() {
+    setUnits(initialUnits());
+    setCurrentPlayer(1);
+    setSelectedId(null);
+    setMode('move');
+    setBoardRot(0);
+    setWinner(null);
+    setTurnNo(1);
+    setLog([{ kind: 'turn', text: '◆ PLAYER 1 — TURN 1 ◆' }]);
+  }
+
+  const counterRot = -boardRot;
+  const flashCell = flash || counterFlash;
+
+  return (
+    <div id="app">
+
+      <div className="field-map paper paper-strong">
+        <div className="stain-ring" />
+        <div className="map-cap">
+          <h3>Tactical Map &middot; Sector 06-N</h3>
+          <span className="map-coord">8&times;8 &middot; HCRAFT &middot; TURN {turnNo}</span>
+        </div>
+
+        <div className="turn-strip">
+          <span className={`pl-stamp p${currentPlayer}`}>PLAYER {currentPlayer}</span>
+          <span className="actions">
+            ON THE OFFENSE &middot; <span className="nb">{units.filter(u => u.player === currentPlayer && u.actionsRemaining > 0).length}</span> units with actions
+          </span>
+          <span className="cmd-tag">{currentPlayer === 1 ? 'BLUE' : 'RED'} CMD</span>
+        </div>
+
+        <div className="board-wrap">
+          <div className="compass" style={{ transform: `rotate(${boardRot}deg)` }}>
+            <span className="n">N</span><span className="s">S</span>
+            <span className="e">E</span><span className="w">W</span>
+          </div>
+
+          <div className="board" style={{ transform: `rotate(${boardRot}deg)` }}>
+            {Array.from({ length: BOARD }).map((_, r) =>
+              Array.from({ length: BOARD }).map((_, c) => {
+                const unit = units.find(u => u.row === r && u.col === c);
+                const isSel = selected && selected.row === r && selected.col === c;
+                const hint  = hints[r+','+c];
+                const isFlash = flashCell && flashCell.row === r && flashCell.col === c;
+                return (
+                  <Cell
+                    key={r+'-'+c}
+                    row={r} col={c}
+                    terrain={TERRAIN[r][c]}
+                    unit={unit}
+                    hint={hint}
+                    selected={isSel}
+                    flash={isFlash}
+                    dmg={isFlash ? flashCell.dmg : null}
+                    counterRot={counterRot}
+                    onClick={() => handleCell(r, c)}
+                  />
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        <div className="map-foot">
+          <span>// SELECT &rarr; MOVE / ATTACK / ROTATE &rarr; ENEMIES COUNTER-STRIKE ON ATTACK</span>
+          <span>// WEATHER OVERCAST &middot; WIND SW 4 KTS</span>
+        </div>
+      </div>
+
+      <aside>
+
+        <div className="panel paper">
+          <h3>Briefing Dossier</h3>
+
+          <h4>Selection</h4>
+          {!selected ? (
+            <div className="sub" style={{padding:'6px 0', fontStyle:'italic'}}>
+              No unit selected. Click one of your tokens on the map.
+            </div>
+          ) : <>
+            <div className="sel-row">
+              <div className={`sel-mini p${selected.player}`}>
+                <div className={`sym-${selected.type.toLowerCase()}`} style={{ position:'absolute', inset: 0 }} />
+                <div className={`facing face-${selected.facing}`} />
+              </div>
+              <div style={{flex:1}}>
+                <div className="sel-title">
+                  {selected.type.toUpperCase()}
+                  {selected.level > 1 && <span style={{marginLeft:6, color:'var(--red)', fontSize:14}}>L{selected.level}</span>}
+                  {selected.trenched && <span className="sel-trench">&#x26E8; DUG IN</span>}
+                </div>
+                <div className="sel-meta">P{selected.player} &middot; ROW {selected.row} &middot; COL {selected.col} &middot; FACE {selected.facing}</div>
+                <div className="sel-meta">TERRAIN: {TERRAIN_LABEL[TERRAIN[selected.row][selected.col]]}</div>
+              </div>
+            </div>
+
+            <h4>Stats</h4>
+            <div className="stat-grid">
+              <Pips kind="hp"    value={selected.hp} max={selected.maxHp} />
+              <div className="k">HP</div>              <div className="v">{selected.hp} / {selected.maxHp}</div>
+
+              <Pips kind="str"   value={UNIT_STATS[selected.type].strength} max={3} />
+              <div className="k">Strength</div>        <div className="v">{UNIT_STATS[selected.type].strength}</div>
+
+              <Pips kind="def"   value={effectiveDefense(selected).total} max={6} />
+              <div className="k">Defense (eff.)</div>  <div className="v">{effectiveDefense(selected).total.toFixed(1)}</div>
+
+              <Pips kind="reach" value={UNIT_STATS[selected.type].reach} max={10} />
+              <div className="k">Reach</div>           <div className="v muted">{UNIT_STATS[selected.type].reach}</div>
+
+              <Pips kind="move"  value={UNIT_STATS[selected.type].movement.ortho + UNIT_STATS[selected.type].movement.diag} max={5} />
+              <div className="k">Move ortho/diag</div> <div className="v muted">{UNIT_STATS[selected.type].movement.ortho} / {UNIT_STATS[selected.type].movement.diag}</div>
+
+              <Pips kind="still" value={Math.min(selected.turnsStill, 3)} max={3} pipCount={3} />
+              <div className="k">Turns still</div>     <div className="v muted">{selected.turnsStill}{UNIT_STATS[selected.type].trench && !selected.trenched && TERRAIN[selected.row][selected.col]!=='swamp' ? ' / 3' : ''}</div>
+            </div>
+
+            <h4>Orders</h4>
+            <div className="action-stamps">
+              <div className={`stamp ${selected.actionsRemaining < 2 ? 'used' : ''}`}>ACT I</div>
+              <div className={`stamp ${selected.actionsRemaining < 1 ? 'used' : ''}`}>ACT II</div>
+            </div>
+            <div className="modes">
+              <button className={mode==='move' ? 'active' : ''}
+                disabled={selected.actionsRemaining <= 0}
+                onClick={() => setMode('move')}>&rsaquo; MOVE</button>
+              <button className={mode==='attack' ? 'active' : ''}
+                disabled={selected.actionsRemaining <= 0 || !canAttackAnything(selected)}
+                onClick={() => setMode('attack')}>&#x2694; ATTACK</button>
+              <button className={mode==='rotate' ? 'active' : ''}
+                onClick={() => setMode('rotate')}>&#x21bb; ROTATE</button>
+            </div>
+            <div className="mode-hint">
+              {mode==='move'   && 'Teal cells = legal moves. Forest / swamp cost 1 extra.'}
+              {mode==='attack' && (canAttackAnything(selected) ? 'Red cells = enemies in reach. Beware counter-strike.' : 'No enemies in reach.')}
+              {mode==='rotate' && 'Click any cell — unit faces that direction (free).'}
+            </div>
+          </>}
+
+          <h4>Combat Log</h4>
+          <div className="log" ref={logRef}>
+            {log.map((e, i) => (
+              <div key={i} className={`log-entry ${e.kind || ''}`}>
+                <div>{e.text}</div>
+                {e.detail && <div className="detail">{e.detail}</div>}
+              </div>
+            ))}
+          </div>
+          <div className="action-row">
+            <button className="danger" onClick={newGame}>&larr; NEW MAP</button>
+            <button className="primary" onClick={endTurn} disabled={!!winner}>
+              END TURN &rarr; P{currentPlayer === 1 ? 2 : 1}
+            </button>
+          </div>
+        </div>
+
+        <div className="panel paper rules-card">
+          <h3>Rules in effect</h3>
+          <div className="rule-line"><b>TERRAIN DEF</b>forest +1.5 &middot; mountain +2 (inf/cav) &middot; swamp +1</div>
+          <div className="rule-line"><b>ENTRY</b>artillery: no forest/mountain. Tanks/mot: no mountain.</div>
+          <div className="rule-line"><b>ATK BONUS</b>forest +1 str &middot; mountain &minus;1 str</div>
+          <div className="rule-line"><b>DIRECTION</b>side +0.5/&minus;0.5 &middot; rear +1/&minus;1 &middot; encircle (4-ortho) +3/&minus;2</div>
+          <div className="rule-line"><b>DOUBLE</b>two ortho friendlies on target: +1 str</div>
+          <div className="rule-line"><b>COUNTER</b>defender auto-rolls back if action stamina remains</div>
+          <div className="rule-line"><b>TRENCH</b>inf/cav still 3 turns &rarr; +2 / +1.5 def (no swamp)</div>
+          <div className="rule-line"><b>FALLOFF</b>artillery: &minus;0.5 str past range 8</div>
+          <div className="rule-line"><b>ARTILLERY</b>ignores all positional tactics</div>
+        </div>
+      </aside>
+
+      {winner && (
+        <div className="winner">
+          <div className="stamp-big">
+            <h2>VICTORY</h2>
+            <div className="pl">PLAYER {winner}</div>
+            <p>The opposing force has been routed.<br/>Field signed, sealed, delivered.</p>
+            <button onClick={newGame}>NEW BRIEFING</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Game />);
+  </script>
+</body>
+</html>

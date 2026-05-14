@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>HQ — Command Desk</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<link rel="stylesheet" href="menu.css" />
+</head>
+<body>
+
+<div class="hud">
+  HQ // 06 JUN 1944 <span class="blink">_</span><br>
+  COMMAND TERMINAL
+</div>
+
+<div id="hint">&#9658; Click anything on the desk</div>
+
+<div id="stage">
+  <div id="scene" style="padding: 51px; margin: 40px">
+    <img class="bg" src="../../assets/menu/desk_clean.png" alt="Command desk" />
+
+    <!--
+      SVG hotspots use polygons that roughly follow each item's perspective.
+      The viewBox is the native image size: 1408 x 768.
+    -->
+    <svg id="overlay" viewBox="0 0 1408 768" preserveAspectRatio="none">
+      <polygon class="hit" data-key="records" id="poly-records"
+        points="530,221 953,217 941,316 536,326" />
+      <polygon class="hit" data-key="patch" id="poly-patch"
+        points="143,387 461,364 473,479 125,537" />
+      <polygon class="hit" data-key="whatsnew" id="poly-whatsnew"
+        points="75,578 480,506 517,639 93,680" />
+      <polygon class="hit" data-key="play" id="poly-play" style="fill: rgba(29, 166, 160, 0.224)"
+        points="505,330 1009,333 1072,683 461,683" />
+      <polygon class="hit" data-key="setup" id="poly-setup"
+        points="1053,364 1308,404 1271,544 1047,510" />
+      <polygon class="hit" data-key="setup" id="poly-recon"
+        points="1071,523 1090,523 1090,542 1071,542" />
+      <polygon class="hit" data-key="rules" id="poly-rules"
+        points="1040,523 1371,551 1346,680 1072,673" />
+    </svg>
+
+    <!-- Cyan hand-painted style labels (positions are tweakable) -->
+    <div class="lbl" id="lbl-records">RECORDS</div>
+    <div class="lbl" id="lbl-patch">PATCH NOTES</div>
+    <div class="lbl" id="lbl-whatsnew">WHAT'S NEW?</div>
+    <div class="lbl" id="lbl-play">PLAY GAME</div>
+    <div class="lbl" id="lbl-setup">PRE-GAME SETUP</div>
+    <div class="lbl" id="lbl-rules">GAME RULES</div>
+  </div>
+</div>
+
+<div id="cursor-label"></div>
+<div id="modal-root" role="dialog" aria-modal="true"></div>
+<div id="tweaks-root"></div>
+
+<script src="menu.js"></script>
+
+<script type="text/babel" data-presets="react" src="label-tweaks.jsx"></script>
+
+</body>
+</html>

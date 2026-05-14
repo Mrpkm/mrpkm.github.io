@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HQ // Core Map — Field Command Desk</title>
+
+  <!-- ── Resources that are referenced from JS strings (lifted for the bundler) ── -->
+  <meta name="ext-resource-dependency" content="../assets/game-icons/tank.png"             data-resource-id="icon_tank" />
+  <meta name="ext-resource-dependency" content="../assets/game-icons/cavalry.png"          data-resource-id="icon_cavalry" />
+  <meta name="ext-resource-dependency" content="../assets/game-icons/infantry.png"         data-resource-id="icon_infantry" />
+  <meta name="ext-resource-dependency" content="../assets/game-icons/motorized.png"        data-resource-id="icon_motorized" />
+  <meta name="ext-resource-dependency" content="../assets/game-icons/artillery.png"        data-resource-id="icon_artillery" />
+  <meta name="ext-resource-dependency" content="../assets/game-icons/plain.png"            data-resource-id="icon_plain" />
+  <meta name="ext-resource-dependency" content="../assets/game-icons/blitzkrieg.png"       data-resource-id="icon_blitzkrieg" />
+  <meta name="ext-resource-dependency" content="../assets/game-icons/superior_firepower.png" data-resource-id="icon_superior" />
+  <meta name="ext-resource-dependency" content="../assets/units/animations/tank/tank-move.gif"       data-resource-id="gif_tank" />
+  <meta name="ext-resource-dependency" content="../assets/units/animations/cavalry/cavalry-move.gif" data-resource-id="gif_cavalry" />
+
+  <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- ── Splash thumbnail for the bundler ── -->
+  <template id="__bundler_thumbnail" data-bg-color="#2a1f17">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#2a1f17"/>
+      <rect x="120" y="120" width="800" height="560" fill="#efe2c4" stroke="#2a1f17" stroke-width="12"/>
+      <g stroke="#6b5a3e" stroke-width="3" opacity="0.55">
+        <path d="M120 240 L920 240"/>
+        <path d="M120 360 L920 360"/>
+        <path d="M120 480 L920 480"/>
+        <path d="M120 600 L920 600"/>
+        <path d="M280 120 L280 680"/>
+        <path d="M440 120 L440 680"/>
+        <path d="M600 120 L600 680"/>
+        <path d="M760 120 L760 680"/>
+      </g>
+      <circle cx="360" cy="300" r="36" fill="#6b3a2a"/>
+      <circle cx="620" cy="420" r="36" fill="#6b3a2a"/>
+      <circle cx="500" cy="560" r="36" fill="#3a6b4a"/>
+      <rect x="980" y="120" width="100" height="560" fill="#efe2c4" stroke="#2a1f17" stroke-width="8"/>
+      <text x="600" y="760" font-family="monospace" font-size="36" fill="#efe2c4" text-anchor="middle" letter-spacing="6">FIELD COMMAND DESK</text>
+    </svg>
+  </template>
+</head>
+<body>
+
+  <!-- ── Command bar (always visible) ── -->
+  <div id="load-bar">
+    <a href="../src/menu/Strategy%20Game%20Menu.html" id="back-btn">← BACK TO HQ</a>
+    <textarea id="paste-textarea" placeholder="// PASTE PRE-GAME BRIEFING CODE…"></textarea>
+    <button id="btn-load">LOAD</button>
+    <span id="parse-error"></span>
+  </div>
+
+  <!-- ── Stage holds either the empty desk or the field map ── -->
+  <div id="stage">
+
+    <!-- ─────────── EMPTY DESK VIEW ─────────── -->
+    <div id="desk-view">
+      <div class="desk-header">
+        <div>
+          <div class="desk-title">Field Command Desk</div>
+          <div class="desk-subtitle">06 JUN 1944 &middot; 04:00 hrs &middot; Map room empty</div>
+        </div>
+        <div class="desk-stamp">AWAITING ORDERS</div>
+      </div>
+
+      <p class="desk-prompt">
+        The map case is empty, Commander. <strong>Drop a sealed briefing onto the desk</strong>
+        and the tactical map will appear &mdash; or pick a routine below to keep yourself busy
+        until the courier arrives.
+      </p>
+
+      <div class="cmd-grid">
+
+        <div class="cmd-card primary" data-action="paste">
+          <span class="cmd-key">F1</span>
+          <h4>▸ Load Briefing</h4>
+          <div class="cmd-desc">Drop a pre-game code into the slot at the top of the desk and the map unfolds.</div>
+          <span class="cmd-stat">PASTE &amp; LOAD</span>
+        </div>
+
+        <div class="cmd-card alert" data-action="demo">
+          <span class="cmd-key">F2</span>
+          <h4>▸ Demonstration Map</h4>
+          <div class="cmd-desc">Load a sealed practice briefing &mdash; Plain doctrine, 14 units, mixed terrain.</div>
+          <span class="cmd-stat">LOAD DEMO</span>
+        </div>
+
+        <div class="cmd-card" data-action="setup">
+          <span class="cmd-key">F3</span>
+          <h4>▸ Pre-Game Setup</h4>
+          <div class="cmd-desc">Pick a doctrine, spend war-points, place your army on the half-board.</div>
+          <span class="cmd-stat">OPEN SETUP</span>
+        </div>
+
+        <div class="cmd-card" data-action="rules">
+          <span class="cmd-key">F4</span>
+          <h4>▸ Rules Manual</h4>
+          <div class="cmd-desc">Consolidated v0.18 ruleset &mdash; combat, units, economy, doctrines.</div>
+          <span class="cmd-stat">CONSULT</span>
+        </div>
+
+        <div class="cmd-card" data-action="last">
+          <span class="cmd-key">F5</span>
+          <h4>▸ Restore Last Map</h4>
+          <div class="cmd-desc">Re-open the briefing you most recently loaded (held in the field safe).</div>
+          <span class="cmd-stat" id="last-status">NONE ON FILE</span>
+        </div>
+
+        <div class="cmd-card" data-action="builder">
+          <span class="cmd-key">F6</span>
+          <h4>▸ Tactical Map Editor</h4>
+          <div class="cmd-desc">Place terrain, decorations and unit tokens before sealing the briefing.</div>
+          <span class="cmd-stat">OPEN BUILDER</span>
+        </div>
+
+      </div>
+
+      <div class="desk-dropzone">
+        <span><b>HINT.</b> Briefings arrive from the Pre-Game Setup screen automatically &mdash;
+          this desk reads the field safe (localStorage) on every load.</span>
+        <span class="blink">_</span>
+      </div>
+
+      <div class="desk-footer">
+        <span>// WEATHER: OVERCAST &middot; WIND SW 4 KTS</span>
+        <span>// SIG: STRONG <span class="blink">▮</span></span>
+      </div>
+    </div>
+
+    <!-- ─────────── FIELD MAP VIEW ─────────── -->
+    <div id="map-view">
+
+      <div class="field-map">
+        <div class="map-cap">
+          <h3 id="mc-title">Tactical Map &middot; SECTOR 06-N</h3>
+          <span class="map-coord" id="mc-coords">12×11 &middot; HCRAFT</span>
+        </div>
+
+        <div class="compass">
+          <span class="n">N</span>
+          <span class="s">S</span>
+          <span class="e">E</span>
+          <span class="w">W</span>
+        </div>
+
+        <div id="map-root"></div>
+
+        <div style="display:flex; justify-content:space-between; font-family:'VT323',monospace; font-size:13px; color:var(--olive); letter-spacing:1px; padding-top:6px; border-top:1px dashed var(--olive); margin-top:4px;">
+          <span id="mc-doctrine-sticker"></span>
+          <span><span class="blink">●</span> LIVE &middot; CLICK A UNIT TO SELECT</span>
+        </div>
+      </div>
+
+      <aside class="side-col">
+        <section class="overview">
+          <div class="ov-cap">
+            <h4>Sector Overview</h4>
+            <span class="ov-coord" id="ov-coords">—</span>
+          </div>
+          <div id="minimap-root" class="minimap"></div>
+        </section>
+
+      <div class="dossier">
+        <h3>Briefing Dossier</h3>
+
+        <h4>Doctrine</h4>
+        <div class="doctrine-line" id="d-doctrine">
+          <img id="d-doctrine-img" alt="" />
+          <div>
+            <div class="name" id="d-doctrine-name">—</div>
+            <div class="wp-bar"><span class="nb" id="d-doctrine-alias"></span></div>
+          </div>
+        </div>
+
+        <h4>War Points</h4>
+        <div class="wp-bar">
+          BUDGET <span class="nb" id="d-wp-budget">—</span> &middot;
+          SPENT <span class="nb" id="d-wp-spent">—</span> &middot;
+          LEFT <span class="nb" id="d-wp-left">—</span>
+        </div>
+
+        <h4>Order of Battle</h4>
+        <div id="d-inventory"></div>
+
+        <h4>Map Legend</h4>
+        <div class="legend-grid">
+          <span><span class="sw P"></span>Plains</span>
+          <span><span class="sw F"></span>Forest</span>
+          <span><span class="sw M"></span>Mountain</span>
+          <span><span class="sw S"></span>Swamp</span>
+        </div>
+
+        <h4>Selection</h4>
+        <div class="sel-card" id="d-selection">
+          <div class="sel-empty">No unit selected. Click a token on the map.</div>
+        </div>
+
+        <div class="action-row">
+          <button id="btn-clear">↩ Clear Map</button>
+          <button id="btn-rules">Rules</button>
+          <button id="btn-setup" class="danger">New Briefing</button>
+        </div>
+      </div>
+      </aside>
+    </div>
+
+  </div>
+
+  <div id="hint">▸ Drop a briefing on the desk, or pick a routine</div>
+
+  <!-- Globals (engine + tools, no asset strings) -->
+  <script src="../src/tools/pathfinder.js"></script>
+  <script src="../src/tools/unit-movement.js"></script>
+  <script src="../src/tools/chroma-renderer.js"></script>
+
+  <!-- Game modules (asset-free) -->
+  <script src="js/state/parser.js"></script>
+  <script src="js/state/gameState.js"></script>
+  <script src="js/render/mapRenderer.js"></script>
+  <script src="js/render/minimapRenderer.js"></script>
+
+  <!-- ── chromaBridge — INLINED & rewritten to use window.__resources ── -->
+  <script>
+  (function () {
+    'use strict';
+
+    const R = window.__resources || {};
+    const LIGHT_SPRITES = {
+      Tanks:     R.icon_tank,
+      Cavalry:   R.icon_cavalry,
+      Infantry:  R.icon_infantry,
+      Motorized: R.icon_motorized,
+      Artillery: R.icon_artillery,
+    };
+    const ANIMATED_GIFS = {
+      Tanks:   R.gif_tank,
+      Cavalry: R.gif_cavalry,
+    };
+
+    const registry = {};
+    const loading = {};
+
+    function lightImg(src, alt) {
+      const img = document.createElement('img');
+      img.className = 'unit-img';
+      img.alt = alt;
+      img.draggable = false;
+      img.src = src;
+      return img;
+    }
+
+    function drawFrameToToken(token, reg) {
+      const frame = reg.frames[reg.frameIdx];
+      if (!frame || !frame.image) return;
+      const ctx = token.ctx;
+      const s = token.size;
+      ctx.clearRect(0, 0, s, s);
+      const fw = frame.w, fh = frame.h;
+      const scale = Math.min(s / fw, s / fh);
+      const dw = fw * scale, dh = fh * scale;
+      const dx = (s - dw) / 2, dy = (s - dh) / 2;
+      try { ctx.drawImage(frame.image, dx, dy, dw, dh); } catch (_) { return; }
+      if (reg.keyColor) {
+        let id;
+        try { id = ctx.getImageData(0, 0, s, s); } catch (_) { return; }
+        const d = id.data, { r: kr, g: kg, b: kb } = reg.keyColor;
+        const tol = 50;
+        for (let i = 0; i < d.length; i += 4) {
+          if (Math.abs(d[i] - kr) < tol &&
+              Math.abs(d[i + 1] - kg) < tol &&
+              Math.abs(d[i + 2] - kb) < tol) d[i + 3] = 0;
+        }
+        ctx.putImageData(id, 0, 0);
+      }
+    }
+
+    function tick(unitType) {
+      const reg = registry[unitType];
+      if (!reg || !reg.frames || !reg.frames.length) return;
+      reg.frameIdx = (reg.frameIdx + 1) % reg.frames.length;
+      const dead = [];
+      reg.tokens.forEach(function (t) {
+        if (!t.canvas.isConnected) { dead.push(t); return; }
+        drawFrameToToken(t, reg);
+      });
+      dead.forEach(function (t) { reg.tokens.delete(t); });
+      const dur = reg.frames[reg.frameIdx].duration;
+      reg.timer = setTimeout(function () { tick(unitType); }, dur);
+    }
+
+    async function loadAnimation(unitType) {
+      if (registry[unitType]) return registry[unitType];
+      if (loading[unitType])  return loading[unitType];
+
+      const src = ANIMATED_GIFS[unitType];
+      if (!src || typeof window.ImageDecoder === 'undefined') return null;
+
+      loading[unitType] = (async function () {
+        const resp = await fetch(src);
+        if (!resp.ok) throw new Error('chromaBridge: HTTP ' + resp.status);
+        const buf = await resp.arrayBuffer();
+        const dec = new window.ImageDecoder({ data: buf, type: 'image/gif' });
+        await dec.tracks.ready;
+        const track = dec.tracks.selectedTrack;
+        const count = track.frameCount || 1;
+        const frames = [];
+        for (let i = 0; i < count; i++) {
+          const res = await dec.decode({ frameIndex: i, completeFramesOnly: true });
+          const vf = res.image;
+          frames.push({
+            image: vf,
+            duration: Math.max(40, (vf.duration || 100000) / 1000),
+            w: vf.displayWidth,
+            h: vf.displayHeight,
+          });
+        }
+        if (!frames.length) throw new Error('chromaBridge: no frames');
+
+        const probeC = document.createElement('canvas');
+        probeC.width = frames[0].w; probeC.height = frames[0].h;
+        const pctx = probeC.getContext('2d', { willReadFrequently: true });
+        pctx.drawImage(frames[0].image, 0, 0);
+        const corner = pctx.getImageData(0, 0, 1, 1).data;
+        const keyColor = { r: corner[0], g: corner[1], b: corner[2] };
+
+        const reg = {
+          frames: frames, keyColor: keyColor, frameIdx: 0,
+          tokens: new Set(), timer: null,
+        };
+        registry[unitType] = reg;
+        reg.timer = setTimeout(function () { tick(unitType); }, frames[0].duration);
+        return reg;
+      })();
+
+      try { return await loading[unitType]; }
+      catch (err) { console.warn('chromaBridge:', err); return null; }
+      finally { loading[unitType] = null; }
+    }
+
+    function getSprite(unitType) {
+      if (!ANIMATED_GIFS[unitType]) {
+        const src = LIGHT_SPRITES[unitType] || LIGHT_SPRITES.Infantry;
+        return lightImg(src, unitType);
+      }
+
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;';
+
+      const fallback = lightImg(LIGHT_SPRITES[unitType], unitType);
+      fallback.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+      wrapper.appendChild(fallback);
+
+      function mountCanvas(reg) {
+        const rect = wrapper.getBoundingClientRect();
+        const size = Math.max(24, Math.floor(Math.min(rect.width, rect.height) || 56));
+        const canvas = document.createElement('canvas');
+        canvas.width  = size;
+        canvas.height = size;
+        canvas.style.cssText =
+          'width:100%;height:100%;display:block;image-rendering:pixelated;' +
+          'filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55));';
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const token = { canvas: canvas, ctx: ctx, size: size };
+        reg.tokens.add(token);
+        drawFrameToToken(token, reg);
+        if (fallback.parentNode === wrapper) wrapper.removeChild(fallback);
+        wrapper.appendChild(canvas);
+      }
+
+      loadAnimation(unitType).then(function (reg) {
+        if (!reg) return;
+        requestAnimationFrame(function () { mountCanvas(reg); });
+      });
+
+      return wrapper;
+    }
+
+    window.ChromaBridge = { getSprite: getSprite };
+  })();
+  </script>
+
+  <script src="js/render/unitRenderer.js"></script>
+  <script src="js/bridges/engineBridge.js"></script>
+  <script src="js/interaction/selection.js"></script>
+  <script src="js/interaction/input.js"></script>
+
+  <!-- ── dossier — INLINED & rewritten to use window.__resources ── -->
+  <script>
+  (function () {
+    'use strict';
+
+    const R = window.__resources || {};
+    const UNIT_ICONS = {
+      Infantry:  R.icon_infantry,
+      Cavalry:   R.icon_cavalry,
+      Tanks:     R.icon_tank,
+      Motorized: R.icon_motorized,
+      Artillery: R.icon_artillery,
+    };
+    const DOCTRINE_ICONS = {
+      Plain:                R.icon_plain,
+      Blitzkrieg:           R.icon_blitzkrieg,
+      'Superior Firepower': R.icon_superior,
+    };
+
+    function render(state) {
+      if (!state) return;
+
+      const dName  = document.getElementById('d-doctrine-name');
+      const dAlias = document.getElementById('d-doctrine-alias');
+      const dImg   = document.getElementById('d-doctrine-img');
+      if (dName)  dName.textContent  = state.doctrine.name;
+      if (dAlias) dAlias.textContent = state.doctrine.alias ? '(' + state.doctrine.alias + ')' : '';
+      if (dImg) {
+        dImg.src = DOCTRINE_ICONS[state.doctrine.name] || UNIT_ICONS.Infantry;
+      }
+
+      const sticker = document.getElementById('mc-doctrine-sticker');
+      if (sticker) {
+        const src = DOCTRINE_ICONS[state.doctrine.name] || '';
+        sticker.innerHTML =
+          '<span class="doctrine-sticker">' +
+          (src ? '<img src="' + src + '" alt="">' : '') +
+          state.doctrine.name +
+          '</span>';
+      }
+
+      const wp = state.warPoints;
+      const elB = document.getElementById('d-wp-budget');
+      const elS = document.getElementById('d-wp-spent');
+      const elL = document.getElementById('d-wp-left');
+      if (elB) elB.textContent = wp.budget;
+      if (elS) elS.textContent = wp.spent.total;
+      if (elL) elL.textContent = wp.remaining;
+
+      const inv = document.getElementById('d-inventory');
+      if (inv) {
+        inv.innerHTML = '';
+        const entries = Object.entries(state.inventory || {});
+        if (!entries.length) {
+          inv.innerHTML = '<div class="inv-row"><span class="nm" style="font-style:italic;color:var(--olive)">No units in field.</span></div>';
+        } else {
+          entries.forEach(function ([name, count]) {
+            const row = document.createElement('div');
+            row.className = 'inv-row';
+            const ico = UNIT_ICONS[name] || UNIT_ICONS.Infantry;
+            row.innerHTML =
+              '<img class="ico" src="' + ico + '" alt="">' +
+              '<span class="nm">' + name + '</span>' +
+              '<span class="ct">×' + count + '</span>';
+            inv.appendChild(row);
+          });
+        }
+      }
+
+      const mcCoord = document.getElementById('mc-coords');
+      if (mcCoord) mcCoord.textContent = state.grid.rows + '×' + state.grid.cols + ' · HCRAFT';
+
+      renderSelection(state);
+    }
+
+    function renderSelection(state) {
+      const card = document.getElementById('d-selection');
+      if (!card) return;
+      const id = state.selectedUnitId;
+      if (!id) {
+        card.innerHTML = '<div class="sel-empty">No unit selected. Click a token on the map.</div>';
+        return;
+      }
+      const u = state.units.find(function(x) { return x.id === id; });
+      if (!u) {
+        card.innerHTML = '<div class="sel-empty">Unit lost from roster.</div>';
+        return;
+      }
+      const ico = UNIT_ICONS[u.type] || UNIT_ICONS.Infantry;
+      const lvl = u.level > 1 ? ' L' + u.level : '';
+      const rank = u.rank ? ' &middot; ' + u.rank : '';
+      card.innerHTML =
+        '<div class="sel-title" style="display:flex;align-items:center;gap:6px;">' +
+          '<img src="' + ico + '" style="width:16px;height:16px;image-rendering:pixelated;">' +
+          u.type + lvl +
+        '</div>' +
+        '<div style="font-family:\'VT323\',monospace;font-size:14px;color:var(--olive);letter-spacing:1px;">' +
+          '@ ROW ' + u.row + ' · COL ' + u.col + rank +
+        '</div>' +
+        '<div style="margin-top:4px;font-size:11px;">Legal destinations highlighted in cyan.</div>';
+    }
+
+    window.Dossier = { render: render };
+  })();
+  </script>
+
+  <script src="js/main.js"></script>
+
+  <!-- Briefing auto-load bridge -->
+  <script>
+    (function () {
+      var code = localStorage.getItem('pregame_briefing');
+      if (!code) return;
+      localStorage.removeItem('pregame_briefing');
+      var ta  = document.getElementById('paste-textarea');
+      var btn = document.getElementById('btn-load');
+      if (ta && btn) { ta.value = code; btn.click(); }
+    })();
+  </script>
+
+  <script src="js/desk.js"></script>
+
+</body>
+</html>

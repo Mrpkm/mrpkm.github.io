@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\parad_e0k86qd\\\\.claude\\\\projects\\\\c--Users-parad-e0k86qd-OneDrive-Asztali-g-p-AI-game-Strategy\\\\memory\")",
+      "Bash(Out-Null)",
+      "Bash(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
+      "Bash(ffmpeg -version)",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; Write-Output \"System.Drawing OK\")",
+      "WebFetch(domain:api.anthropic.com)",
+      "WebFetch(domain:claude.ai)",
+      "PowerShell(Copy-Item \"Ai-strategy-game_infantry icon.png\"          \"src\\\\assets\\\\infantry.png\"  -Force)",
+      "PowerShell(Copy-Item \"Ai-strategy-game_cavarly icon.png\"           \"src\\\\assets\\\\cavalry.png\"   -Force)",
+      "PowerShell(Copy-Item \"Ai-strategy-game_tank icon.png\"              \"src\\\\assets\\\\tank.png\"      -Force)",
+      "PowerShell(Copy-Item \"Ai-strategy-game_motorized infantry icon.png\" \"src\\\\assets\\\\motorized.png\" -Force)",
+      "PowerShell(Copy-Item \"Ai-strategy-game_artillery icon.png\"         \"src\\\\assets\\\\artillery.png\" -Force)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\parad_e0k86qd\\\\OneDrive\\\\Asztali gép\\\\AI-game-Strategy\"; powershell.exe -ExecutionPolicy Bypass -File \".\\\\reorganise.ps1\")",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\parad_e0k86qd\\\\OneDrive\\\\Asztali gép\\\\AI-game-Strategy\" -Recurse -File | Where-Object { $_.Extension -match '\\\\.\\(jsx|js|html|css|md|png|jpg|jpeg|gif|svg|mp4|webp|PNG|JPG|zip\\)$' } | Group-Object Extension | Sort-Object Name | ForEach-Object { \"$\\($_.Name\\) — $\\($_.Count\\) files\" })",
+      "Read(//c/Users/parad_e0k86qd/OneDrive/Asztali g�p/AI-game-Strategy/src/menu/**)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\parad_e0k86qd\\\\OneDrive\\\\Asztali gép\\\\AI-game-Strategy\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Read(//c/Users/parad_e0k86qd/OneDrive/Asztali g�p/**)",
+      "Read(//c/Users/parad_e0k86qd/OneDrive/Asztali gep/AI-game-Strategy/assets/**)",
+      "Read(//c/Users/parad_e0k86qd/OneDrive/**)",
+      "Bash(npm --version)",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version)",
+      "PowerShell(winget --version)",
+      "PowerShell(winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\('Path','Machine'\\) + ';' + [System.Environment]::GetEnvironmentVariable\\('Path','User'\\); node --version)",
+      "PowerShell(winget install OpenJS.NodeJS.LTS --accept-package-agreements --accept-source-agreements --silent 2>&1; Write-Host \"Exit: $LASTEXITCODE\")",
+      "Read(//c/Program Files/nodejs/**)",
+      "Bash(Get-Content \"c:\\\\Users\\\\parad_e0k86qd\\\\OneDrive\\\\Asztali gép\\\\AI-game-Strategy\\\\orchestration-bridge\\\\lib\\\\puppeteer-controller.js\")",
+      "Read(//c//**)",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); Set-Location \"c:\\\\Users\\\\parad_e0k86qd\\\\OneDrive\\\\Asztali gép\\\\AI-game-Strategy\\\\orchestration-bridge\"; npm.cmd install 2>&1)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\parad_e0k86qd\\OneDrive\\Asztali gép\\AI-game-Strategy\\src",
+      "C:\\Users\\parad_e0k86qd\\OneDrive\\Asztali g�p\\AI-game-Strategy",
+      "c:\\Users\\parad_e0k86qd\\OneDrive\\Asztali g�p\\AI-game-Strategy\\src\\tools",
+      "D:\\"
+    ]
+  }
+}

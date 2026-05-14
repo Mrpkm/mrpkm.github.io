@@ -1,0 +1,871 @@
+/* ============================================================
+   CORE MAP — WW2 Command Desk
+   Matches the visual vocabulary of ../src/menu/menu.css
+   ============================================================ */
+
+:root {
+  --ink: #2a1f17;
+  --ink-dark: #1a1208;
+  --paper: #efe2c4;
+  --paper-dark: #d9c79c;
+  --paper-light: #f7ecd0;
+  --teal: #6fd3d6;
+  --red: #b22b2b;
+  --olive: #6b4e2a;
+  --wood-dark: #2c1d10;
+  --wood-mid:  #4a3220;
+  --wood-light: #5d4128;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Courier Prime', 'Courier New', monospace;
+  color: #fff;
+  user-select: none;
+  background: var(--wood-dark);
+}
+
+/* ── Wood-grain desk background ─────────────────────────────── */
+body {
+  background:
+    /* faint knothole shadows */
+    radial-gradient(ellipse 600px 200px at 18% 22%, rgba(0,0,0,0.35), transparent 70%),
+    radial-gradient(ellipse 700px 220px at 82% 78%, rgba(0,0,0,0.30), transparent 70%),
+    /* horizontal wood grain stripes */
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,210,150,0.025) 0 2px,
+      rgba(0,0,0,0.06)        2px 6px,
+      rgba(255,210,150,0.018) 6px 14px,
+      rgba(0,0,0,0.05)        14px 22px
+    ),
+    /* base wood gradient */
+    linear-gradient(180deg, #3a2614 0%, #2a1d10 50%, #1d1208 100%);
+}
+
+/* Faint reticle/blueprint paper artifacts at the corners */
+body::before, body::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  width: 380px; height: 380px;
+  opacity: 0.45;
+  z-index: 0;
+  mix-blend-mode: screen;
+}
+body::before {
+  top: -90px; left: -90px;
+  background: radial-gradient(circle at 50% 50%, rgba(111,211,214,0.10), transparent 65%);
+}
+body::after {
+  bottom: -90px; right: -90px;
+  background: radial-gradient(circle at 50% 50%, rgba(178,43,43,0.10), transparent 65%);
+}
+
+/* ── Top command bar ─────────────────────────────────────────── */
+#load-bar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: linear-gradient(180deg, #161009 0%, #0c0805 100%);
+  border-bottom: 1px solid #000;
+  box-shadow:
+    inset 0 -1px 0 rgba(111, 211, 214, 0.15),
+    0 4px 18px rgba(0,0,0,0.6);
+  color: var(--teal);
+  font-family: 'VT323', monospace;
+  letter-spacing: 2px;
+}
+#load-bar::before {
+  content: "HQ // CORE MAP";
+  font-size: 16px;
+  color: var(--teal);
+  text-shadow: 0 0 8px rgba(111, 211, 214, 0.6);
+  padding-right: 10px;
+  border-right: 1px solid rgba(111, 211, 214, 0.3);
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+#back-btn {
+  color: var(--teal);
+  text-decoration: none;
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  padding: 4px 10px;
+  border: 1px solid rgba(111, 211, 214, 0.45);
+  background: rgba(111, 211, 214, 0.04);
+  transition: background .15s, box-shadow .15s;
+  white-space: nowrap;
+}
+#back-btn:hover {
+  background: rgba(111, 211, 214, 0.18);
+  box-shadow: 0 0 10px rgba(111, 211, 214, 0.4);
+}
+
+#paste-textarea {
+  flex: 1;
+  height: 30px;
+  min-height: 30px;
+  max-height: 140px;
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  resize: vertical;
+  background: var(--ink-dark);
+  color: #d9e8e9;
+  border: 1px solid rgba(111, 211, 214, 0.4);
+  padding: 5px 8px;
+  outline: none;
+}
+#paste-textarea:focus { border-color: var(--teal); box-shadow: 0 0 6px rgba(111,211,214,0.4); }
+#paste-textarea::placeholder { color: #5a6a6b; font-style: italic; }
+
+#btn-load {
+  padding: 6px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink-dark);
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: background .12s, transform .08s;
+}
+#btn-load:hover { background: #fff5d6; }
+#btn-load:active { transform: translateY(1px); }
+
+#parse-error {
+  color: #ff9090;
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  max-width: 260px;
+}
+
+/* ── Stage: the desk surface ────────────────────────────────── */
+#stage {
+  position: relative;
+  z-index: 1;
+  height: calc(100vh - 47px);
+  width: 100vw;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+/* ── Empty desk: command-buttons view ───────────────────────── */
+#desk-view {
+  position: relative;
+  width: min(1180px, 96%);
+  max-height: 100%;
+  background:
+    /* faint coffee ring */
+    radial-gradient(circle 90px at 88% 14%, rgba(120,80,30,0.22), rgba(120,80,30,0) 70%),
+    radial-gradient(circle 60px at 88% 14%, transparent 50%, rgba(70,40,10,0.20) 52%, transparent 60%),
+    /* paper grain */
+    repeating-linear-gradient(0deg, rgba(120,90,40,0.06) 0 2px, transparent 2px 6px),
+    radial-gradient(ellipse at 18% 18%, rgba(150,100,30,0.16), transparent 60%),
+    radial-gradient(ellipse at 82% 88%, rgba(80,40,10,0.20), transparent 60%),
+    var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+  box-shadow:
+    0 0 0 6px var(--paper-dark),
+    0 0 0 8px var(--ink),
+    0 30px 60px rgba(0,0,0,0.7);
+  padding: 26px 30px 28px;
+}
+
+.desk-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+}
+.desk-title {
+  font-family: 'Special Elite', monospace;
+  font-size: 30px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.desk-subtitle {
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  color: var(--olive);
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+.desk-stamp {
+  font-family: 'Special Elite', monospace;
+  color: var(--red);
+  border: 2px solid var(--red);
+  padding: 4px 12px;
+  transform: rotate(-4deg);
+  font-size: 13px;
+  letter-spacing: 2px;
+  opacity: 0.85;
+}
+
+.desk-prompt {
+  font-family: 'Courier Prime', monospace;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 16px;
+}
+.desk-prompt strong {
+  color: var(--red);
+  font-family: 'Special Elite', monospace;
+  letter-spacing: 1px;
+}
+
+/* Command buttons grid */
+.cmd-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.cmd-card {
+  background: var(--paper-light);
+  border: 1px solid var(--ink);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: transform .14s, background .14s, box-shadow .14s;
+  text-align: left;
+  color: var(--ink);
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  position: relative;
+  overflow: hidden;
+}
+.cmd-card::before {
+  /* punched-card hole row decoration */
+  content: "";
+  position: absolute;
+  top: 8px; left: 8px; right: 8px;
+  height: 4px;
+  background:
+    radial-gradient(circle 2px at 4px 2px, rgba(0,0,0,0.18) 90%, transparent),
+    radial-gradient(circle 2px at 14px 2px, rgba(0,0,0,0.18) 90%, transparent),
+    radial-gradient(circle 2px at 24px 2px, rgba(0,0,0,0.18) 90%, transparent),
+    radial-gradient(circle 2px at 34px 2px, rgba(0,0,0,0.18) 90%, transparent);
+  background-repeat: repeat-x;
+  background-size: 40px 4px;
+  opacity: 0.7;
+}
+.cmd-card:hover {
+  background: #fff5d6;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+}
+.cmd-card h4 {
+  margin: 8px 0 6px;
+  font-family: 'Special Elite', monospace;
+  letter-spacing: 2px;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+.cmd-card .cmd-stat {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: var(--red);
+  letter-spacing: 1px;
+  margin-top: 8px;
+  display: block;
+}
+.cmd-card .cmd-desc {
+  font-size: 12px;
+  color: var(--olive);
+}
+.cmd-card .cmd-key {
+  position: absolute;
+  top: 8px; right: 8px;
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  color: var(--olive);
+  background: rgba(255,255,255,0.4);
+  padding: 1px 5px;
+  border: 1px solid var(--olive);
+}
+
+.cmd-card.primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink-dark);
+}
+.cmd-card.primary:hover { background: #3a2c1f; }
+.cmd-card.primary h4 { color: var(--teal); }
+.cmd-card.primary .cmd-stat { color: var(--teal); }
+.cmd-card.primary .cmd-desc { color: #c8b896; }
+.cmd-card.primary .cmd-key { color: var(--teal); border-color: var(--teal); background: rgba(0,0,0,0.3); }
+
+.cmd-card.alert .cmd-stat { color: var(--red); }
+
+/* Paste briefing inline dropzone, lives inside the desk view */
+.desk-dropzone {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--olive);
+  background: rgba(255, 248, 225, 0.45);
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: var(--olive);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  letter-spacing: 1px;
+}
+.desk-dropzone b {
+  font-family: 'Special Elite', monospace;
+  letter-spacing: 2px;
+  color: var(--ink);
+}
+
+/* Mini telegraph footer */
+.desk-footer {
+  margin-top: 18px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--olive);
+  display: flex;
+  justify-content: space-between;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: var(--olive);
+  letter-spacing: 1px;
+}
+.desk-footer .blink { animation: blink 1.4s steps(2,end) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── Map view: paper field map on a clipboard ────────────────── */
+#map-view {
+  display: none;
+  position: relative;
+  width: min(1280px, 99%);
+  max-height: calc(100vh - 90px);
+  grid-template-columns: minmax(560px, 1fr) 300px;
+  gap: 22px;
+  align-items: start;
+}
+#map-view.active { display: grid; }
+
+/* Field map clipboard */
+.field-map {
+  position: relative;
+  background:
+    /* paper grain */
+    repeating-linear-gradient(0deg, rgba(120,90,40,0.04) 0 2px, transparent 2px 5px),
+    radial-gradient(ellipse at top left, rgba(150,100,30,0.10), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(80,40,10,0.12), transparent 60%),
+    var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow:
+    0 0 0 6px var(--paper-dark),
+    0 0 0 8px var(--ink),
+    0 24px 50px rgba(0,0,0,0.6);
+  padding: 18px 18px 14px;
+}
+.field-map .map-cap {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--olive);
+}
+.field-map .map-cap h3 {
+  font-family: 'Special Elite', monospace;
+  font-size: 18px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.field-map .map-cap .map-coord {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--red);
+  letter-spacing: 1px;
+}
+
+/* Compass rose in the corner of the map */
+.compass {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 44px; height: 44px;
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  color: var(--ink);
+  pointer-events: none;
+  opacity: 0.7;
+}
+.compass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background:
+    linear-gradient(45deg, transparent 47%, var(--ink) 48% 52%, transparent 53%),
+    linear-gradient(135deg, transparent 47%, var(--ink) 48% 52%, transparent 53%);
+}
+.compass span {
+  position: absolute;
+  left: 50%; transform: translateX(-50%);
+  background: var(--paper);
+  padding: 0 2px;
+}
+.compass .n { top: -3px; }
+.compass .s { bottom: -3px; color: var(--red); }
+.compass .e { right: -7px; left: auto; top: 50%; transform: translateY(-50%); }
+.compass .w { left: -8px; transform: translateY(-50%); top: 50%; }
+
+/* ── Map grid (smaller!) ────────────────────────────────────── */
+#map-root {
+  display: grid;
+  grid-template-rows: repeat(12, 56px);
+  grid-template-columns: repeat(11, 56px);
+  width: max-content;
+  margin: 4px auto 6px;
+  border: 1px solid var(--ink);
+  box-shadow:
+    0 0 0 2px var(--paper-dark),
+    0 0 0 3px var(--ink),
+    inset 0 0 32px rgba(60,40,15,0.35);
+}
+
+.cell {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgba(40, 25, 10, 0.32);
+  cursor: pointer;
+  overflow: hidden;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+/* Bake the tile imagery into a slightly desaturated/parchment look */
+.cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: inherit;
+  background-image: inherit;
+  background-size: cover;
+  filter: sepia(0.25) saturate(0.85) brightness(0.95);
+  pointer-events: none;
+}
+.cell[data-biome="P"] { background-image: url('../assets/tiles/grass-plain.png'); }
+.cell[data-biome="F"] { background-image: url('../assets/tiles/forest.png'); }
+.cell[data-biome="M"] { background-image: url('../assets/tiles/mountains.png'); }
+.cell[data-biome="S"] { background-image: url('../assets/tiles/swamp.png'); }
+
+/* paper overlay tint over tiles to keep map-y feel */
+.cell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(239, 226, 196, 0.10);
+  pointer-events: none;
+}
+
+.cell.legal-move {
+  outline: 1.5px solid var(--teal);
+  outline-offset: -2px;
+}
+.cell.legal-move::after {
+  background:
+    radial-gradient(circle, rgba(111, 211, 214, 0.45), rgba(111, 211, 214, 0.18) 60%, transparent 75%);
+}
+
+/* HQ corner markers */
+.cell.hq-mark::before {
+  filter: sepia(0.15) saturate(0.9) brightness(0.95);
+}
+.cell.hq-mark > .hq-flag {
+  position: absolute;
+  inset: 4px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Special Elite', monospace;
+  font-size: 14px;
+  color: var(--paper);
+  background: var(--red);
+  border: 1px solid var(--ink);
+  letter-spacing: 1px;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* ── Side column: minimap + dossier stacked ─────────────────── */
+.side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+}
+.side-col::-webkit-scrollbar { width: 8px; }
+.side-col::-webkit-scrollbar-track { background: var(--paper-dark); }
+.side-col::-webkit-scrollbar-thumb { background: var(--olive); border: 1px solid var(--ink); }
+
+/* Overview / minimap card */
+.overview {
+  background:
+    repeating-linear-gradient(0deg, rgba(120,90,40,0.05) 0 2px, transparent 2px 5px),
+    var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow:
+    0 0 0 4px var(--paper-dark),
+    0 0 0 6px var(--ink),
+    0 14px 28px rgba(0,0,0,0.5);
+  color: var(--ink);
+  padding: 10px 12px 12px;
+}
+.overview .ov-cap {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--olive);
+}
+.overview .ov-cap h4 {
+  font-family: 'Special Elite', monospace;
+  font-size: 13px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.overview .ov-coord {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: var(--red);
+  letter-spacing: 1px;
+}
+.minimap {
+  display: grid;
+  grid-template-rows: repeat(var(--mm-rows, 12), 18px);
+  grid-template-columns: repeat(var(--mm-cols, 11), 18px);
+  width: max-content;
+  margin: 0 auto;
+  border: 1px solid var(--ink);
+  box-shadow:
+    0 0 0 2px var(--paper-dark),
+    0 0 0 3px var(--ink),
+    inset 0 0 10px rgba(60,40,15,0.4);
+}
+.mm-cell {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(40, 25, 10, 0.20);
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.mm-cell[data-biome="P"] { background-image: url('../assets/tiles/grass-plain.png'); }
+.mm-cell[data-biome="F"] { background-image: url('../assets/tiles/forest.png'); }
+.mm-cell[data-biome="M"] { background-image: url('../assets/tiles/mountains.png'); }
+.mm-cell[data-biome="S"] { background-image: url('../assets/tiles/swamp.png'); }
+.mm-cell::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: rgba(239, 226, 196, 0.18);
+  pointer-events: none;
+}
+.mm-cell.mm-legal {
+  outline: 1px solid var(--teal);
+  outline-offset: -1px;
+  z-index: 1;
+}
+.mm-cell.mm-legal::after {
+  background: rgba(111, 211, 214, 0.40);
+}
+.mm-unit {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,0,0,0.65);
+  box-shadow: 0 0 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.35);
+  z-index: 2;
+  pointer-events: none;
+}
+.mm-unit.mm-selected {
+  outline: 1.5px solid #ffd34a;
+  outline-offset: 1px;
+  box-shadow: 0 0 6px rgba(255,211,74,0.85);
+}
+
+/* Dossier sits inside .side-col now — strip its own scroll/max-height. */
+.side-col .dossier {
+  max-height: none;
+  overflow: visible;
+}
+
+/* ── Units (light, no chroma) ───────────────────────────────── */
+.unit {
+  position: absolute;
+  inset: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 3;
+  pointer-events: all;
+}
+.unit .unit-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+  filter:
+    drop-shadow(0 1px 0 rgba(0,0,0,0.55))
+    drop-shadow(0 0 2px rgba(255,255,255,0.25));
+  pointer-events: none;
+}
+.unit canvas {
+  max-width: 100%;
+  max-height: 100%;
+  display: block;
+  image-rendering: pixelated;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 0 rgba(0,0,0,0.55));
+}
+
+/* Subtle idle bob so units feel alive (the "animation" feel without heavy gifs) */
+@keyframes unit-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-1.5px); }
+}
+.unit { animation: unit-bob 2.4s ease-in-out infinite; }
+.unit[data-unit-type="Cavalry"]   { animation-duration: 1.8s; }
+.unit[data-unit-type="Tanks"]     { animation-duration: 3.0s; animation-name: tank-rumble; }
+.unit[data-unit-type="Artillery"] { animation-duration: 3.4s; }
+@keyframes tank-rumble {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25%      { transform: translateX(-0.5px) translateY(0.3px); }
+  75%      { transform: translateX(0.5px) translateY(-0.3px); }
+}
+
+/* Selected ring */
+.unit--selected::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border: 1.5px solid #ffd34a;
+  box-shadow: 0 0 8px rgba(255, 211, 74, 0.7);
+  pointer-events: none;
+  animation: pulse-ring 1.2s ease-in-out infinite;
+}
+@keyframes pulse-ring {
+  0%, 100% { box-shadow: 0 0 6px rgba(255, 211, 74, 0.6); }
+  50%      { box-shadow: 0 0 14px rgba(255, 211, 74, 0.9); }
+}
+
+.unit .rank-chip {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  font-size: 10px;
+  padding: 0 3px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'VT323', monospace;
+  line-height: 1.2;
+  letter-spacing: 0.5px;
+  border: 1px solid var(--paper-dark);
+  pointer-events: none;
+}
+
+/* ── Side panel: dossier / clipboard ────────────────────────── */
+.dossier {
+  background:
+    repeating-linear-gradient(0deg, rgba(120,90,40,0.05) 0 2px, transparent 2px 5px),
+    var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow:
+    0 0 0 4px var(--paper-dark),
+    0 0 0 6px var(--ink),
+    0 18px 38px rgba(0,0,0,0.55);
+  color: var(--ink);
+  padding: 14px 16px 16px;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+}
+.dossier::-webkit-scrollbar { width: 8px; }
+.dossier::-webkit-scrollbar-track { background: var(--paper-dark); }
+.dossier::-webkit-scrollbar-thumb { background: var(--olive); border: 1px solid var(--ink); }
+
+.dossier h3 {
+  font-family: 'Special Elite', monospace;
+  font-size: 16px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--ink);
+  margin-bottom: 10px;
+}
+.dossier h4 {
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--red);
+  margin: 14px 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px dashed var(--olive);
+}
+.dossier .doctrine-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+.dossier .doctrine-line img {
+  width: 38px; height: 38px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  border: 1px solid var(--ink);
+  background: var(--paper-light);
+  padding: 2px;
+}
+.dossier .doctrine-line .name {
+  font-family: 'Special Elite', monospace;
+  letter-spacing: 1px;
+  font-size: 14px;
+}
+.dossier .wp-bar {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--olive);
+  letter-spacing: 1px;
+}
+.dossier .wp-bar .nb { color: var(--red); font-weight: 700; }
+
+.inv-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+}
+.inv-row .ico {
+  width: 22px; height: 22px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.inv-row .nm { flex: 1; }
+.inv-row .ct {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--red);
+  min-width: 26px;
+  text-align: right;
+}
+
+.legend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+}
+.legend-grid .sw {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border: 1px solid var(--ink);
+  vertical-align: middle;
+  margin-right: 5px;
+}
+.legend-grid .sw.P { background: #8aaf6a; }
+.legend-grid .sw.F { background: #3f6b3a; }
+.legend-grid .sw.M { background: #7e6f5a; }
+.legend-grid .sw.S { background: #5a6b4a; }
+
+.action-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.action-row button {
+  flex: 1;
+  padding: 6px 8px;
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 1px;
+  background: var(--paper-light);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}
+.action-row button:hover { background: #fff5d6; }
+.action-row button.danger { color: var(--red); }
+
+/* Selection info card */
+.sel-card {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: var(--paper-light);
+  border: 1px solid var(--ink);
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+}
+.sel-card .sel-title {
+  font-family: 'Special Elite', monospace;
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.sel-card .sel-empty { color: var(--olive); font-style: italic; }
+
+/* Bottom status hint */
+#hint {
+  position: fixed; bottom: 12px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  color: var(--teal);
+  background: rgba(10,8,4,0.78);
+  border: 1px solid var(--teal);
+  padding: 5px 14px;
+  font-family: 'VT323', monospace;
+  font-size: 16px; letter-spacing: 2px;
+  box-shadow: 0 0 14px rgba(111, 211, 214, 0.35);
+  transition: opacity .4s;
+  pointer-events: none;
+}
+#hint.fade { opacity: 0; }
+
+/* Tiny doctrine sticker on the field map header */
+.doctrine-sticker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: var(--paper-light);
+  border: 1px solid var(--ink);
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.doctrine-sticker img { width: 18px; height: 18px; image-rendering: pixelated; }
