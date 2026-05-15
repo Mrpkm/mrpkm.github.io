@@ -61,6 +61,14 @@
     window.location.href = '../src/tools/pregame-setup.html';
   }
 
+  // Auto-trigger demo or restore when arriving via ?action= from the menu
+  var _autoAction = new URLSearchParams(window.location.search).get('action');
+  if (_autoAction) {
+    // 'restore' is the menu-facing name; internally the handler uses 'last'
+    var _mappedAction = _autoAction === 'restore' ? 'last' : _autoAction;
+    setTimeout(function () { _handleAction(_mappedAction); }, 0);
+  }
+
   // Wire cmd-card clicks
   document.querySelectorAll('.cmd-card[data-action]').forEach(function (card) {
     card.addEventListener('click', function () {

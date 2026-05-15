@@ -212,38 +212,71 @@
     `),
 
     play: () => {
+      var lastOnFile = !!localStorage.getItem('last_briefing');
       panel(`
         <header>
           <h2>Play Game</h2>
           <span class="stamp">Tactical</span>
         </header>
         <p class="meta">Select an operation mode to begin</p>
-        <div class="tac-grid" style="grid-template-columns:1fr 1fr 1fr;">
-          <div class="tac-card" id="card-2player">
-            <h4>&#9876; 2-Player Battle</h4>
-            <p style="margin:6px 0 10px;font-size:13px;">Full combat rules &mdash; take turns on the same screen. Loads your last pre-game brief automatically.</p>
-            <div class="stat">ENGAGE</div>
+        <div class="cmd-grid-panel">
+          <div class="cmd-card-p primary" id="card-load">
+            <span class="ckey">F1</span>
+            <h4>&#9658; Load Briefing</h4>
+            <div class="cdesc">Drop a pre-game code into the field command desk and the map unfolds.</div>
+            <span class="cstat">PASTE &amp; LOAD</span>
           </div>
-          <div class="tac-card" id="card-setup-2p">
-            <h4>&#9998; Pre-Game Setup</h4>
-            <p style="margin:6px 0 10px;font-size:13px;">Build your army, pick a doctrine and deploy &mdash; then jump straight into the 2-player battle.</p>
-            <div class="stat">OPEN SETUP</div>
+          <div class="cmd-card-p" id="card-demo">
+            <span class="ckey">F2</span>
+            <h4>&#9658; Demonstration Map</h4>
+            <div class="cdesc">Load a sealed practice briefing &mdash; Plain doctrine, 14 units, mixed terrain.</div>
+            <span class="cstat">LOAD DEMO</span>
           </div>
-          <div class="tac-card" id="card-board">
-            <h4>&#9632; Map Builder</h4>
-            <p style="margin:6px 0 10px;font-size:13px;">Place terrain, decorations and unit tokens before sealing the briefing.</p>
-            <div class="stat">MAP BUILDER</div>
+          <div class="cmd-card-p" id="card-setup-play">
+            <span class="ckey">F3</span>
+            <h4>&#9658; Pre-Game Setup</h4>
+            <div class="cdesc">Pick a doctrine, spend war-points, place your army on the half-board.</div>
+            <span class="cstat">OPEN SETUP</span>
+          </div>
+          <div class="cmd-card-p" id="card-rules-play">
+            <span class="ckey">F4</span>
+            <h4>&#9658; Rules Manual</h4>
+            <div class="cdesc">Consolidated v0.18 ruleset &mdash; combat, units, economy, doctrines.</div>
+            <span class="cstat">CONSULT</span>
+          </div>
+          <div class="cmd-card-p" id="card-last">
+            <span class="ckey">F5</span>
+            <h4>&#9658; Restore Last Map</h4>
+            <div class="cdesc">Re-open the briefing you most recently loaded from the field safe.</div>
+            <span class="cstat">${lastOnFile ? 'ON FILE' : 'NONE ON FILE'}</span>
+          </div>
+          <div class="cmd-card-p" id="card-builder-play">
+            <span class="ckey">F6</span>
+            <h4>&#9658; Tactical Map Editor</h4>
+            <div class="cdesc">Place terrain, decorations and unit tokens before sealing the briefing.</div>
+            <span class="cstat">OPEN BUILDER</span>
           </div>
         </div>
       `);
-      document.getElementById('card-2player').addEventListener('click', () => {
-        // Go to core-map in 2-player mode; load last brief if one is saved
-        window.location.href = '../../core-map/index.html?mode=2player';
+      document.getElementById('card-load').addEventListener('click', () => {
+        window.location.href = '../../core-map/index.html';
       });
-      document.getElementById('card-setup-2p').addEventListener('click', () => {
+      document.getElementById('card-demo').addEventListener('click', () => {
+        window.location.href = '../../core-map/index.html?action=demo';
+      });
+      document.getElementById('card-setup-play').addEventListener('click', () => {
         window.location.href = '../tools/pregame-setup.html';
       });
-      document.getElementById('card-board').addEventListener('click', () => {
+      document.getElementById('card-rules-play').addEventListener('click', () => {
+        closePanel();
+        openPanel('rules');
+      });
+      document.getElementById('card-last').addEventListener('click', () => {
+        if (localStorage.getItem('last_briefing')) {
+          window.location.href = '../../core-map/index.html?action=restore';
+        }
+      });
+      document.getElementById('card-builder-play').addEventListener('click', () => {
         window.location.href = 'map-builder.html';
       });
     },

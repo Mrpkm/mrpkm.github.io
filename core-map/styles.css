@@ -30,19 +30,21 @@ html, body {
   background: var(--wood-dark);
 }
 
-/* ── Wood-grain desk background ─────────────────────────────── */
+/* ── Desk background: blurred HQ image (mirrors menu for smooth transition) ── */
 body {
-  background:
-    radial-gradient(ellipse 600px 200px at 18% 22%, rgba(0,0,0,0.35), transparent 70%),
-    radial-gradient(ellipse 700px 220px at 82% 78%, rgba(0,0,0,0.30), transparent 70%),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255,210,150,0.025) 0 2px,
-      rgba(0,0,0,0.06)        2px 6px,
-      rgba(255,210,150,0.018) 6px 14px,
-      rgba(0,0,0,0.05)        14px 22px
-    ),
-    linear-gradient(180deg, #3a2614 0%, #2a1d10 50%, #1d1208 100%);
+  background: transparent;
+}
+
+#bg-desk {
+  position: fixed;
+  inset: 0;
+  background-image: url('../assets/menu/desk_clean.png');
+  background-size: cover;
+  background-position: center;
+  filter: blur(12px) brightness(0.32) saturate(0.8);
+  transform: scale(1.06);
+  z-index: -1;
+  pointer-events: none;
 }
 
 body::before, body::after {
