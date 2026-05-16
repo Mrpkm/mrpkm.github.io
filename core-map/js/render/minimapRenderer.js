@@ -40,6 +40,7 @@
       var el = _cells[key];
       el.classList.toggle('mm-legal', !!legalSet[key]);
       el.classList.toggle('mm-attack', !!attackSet[key]);
+      el.classList.remove('mm-has-p1', 'mm-has-p2');
       var old = el.querySelector('.mm-unit');
       if (old) el.removeChild(old);
     });
@@ -48,9 +49,11 @@
       var key = u.row + ',' + u.col;
       var cellEl = _cells[key];
       if (!cellEl) return;
+      var isAi = u.owner === 'ai';
+      cellEl.classList.add(isAi ? 'mm-has-p2' : 'mm-has-p1');
       var dot = document.createElement('div');
       dot.className = 'mm-unit' + (u.id === state.selectedUnitId ? ' mm-selected' : '');
-      dot.style.background = u.owner === 'ai' ? '#b22b2b' : '#3a6b4a';
+      dot.style.background = isAi ? '#cc4040' : '#3a7acc';
       cellEl.appendChild(dot);
     });
 

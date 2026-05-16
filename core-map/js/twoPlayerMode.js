@@ -550,6 +550,22 @@
     var el = _unitEls[id];
     if (el) { el.remove(); delete _unitEls[id]; }
   }
+  function _markTargetRows() {
+    for (var c = 1; c <= _gridCols; c++) {
+      var t = window.MapRenderer.getCellEl(1, c);
+      if (t) t.classList.add('twp-target-p1');
+      var b = window.MapRenderer.getCellEl(_gridRows, c);
+      if (b) b.classList.add('twp-target-p2');
+    }
+  }
+
+  function _flashBreachCell(row, col) {
+    var cellEl = window.MapRenderer.getCellEl(row, col);
+    if (!cellEl) return;
+    cellEl.classList.add('twp-breach-flash');
+    setTimeout(function () { cellEl.classList.remove('twp-breach-flash'); }, 1500);
+  }
+
   function _checkWinner() {
     var p1 = _units.some(function (u) { return u.player === 1; });
     var p2 = _units.some(function (u) { return u.player === 2; });
@@ -559,13 +575,15 @@
 
   function _checkEndReached() {
     if (_winner) return;
-    var p1Reached = _units.some(function (u) { return u.player === 1 && u.row === 1; });
-    var p2Reached = _units.some(function (u) { return u.player === 2 && u.row === _gridRows; });
-    if (p1Reached) {
+    var p1Unit = _units.find(function (u) { return u.player === 1 && u.row === 1; });
+    var p2Unit = _units.find(function (u) { return u.player === 2 && u.row === _gridRows; });
+    if (p1Unit) {
       _winner = 1;
+      _flashBreachCell(1, p1Unit.col);
       _pushLog({ kind: 'turn', text: '★ PLAYER 1 BREACHED ENEMY LINES — P1 WINS ★' });
-    } else if (p2Reached) {
+    } else if (p2Unit) {
       _winner = 2;
+      _flashBreachCell(_gridRows, p2Unit.col);
       _pushLog({ kind: 'turn', text: '★ PLAYER 2 BREACHED ENEMY LINES — P2 WINS ★' });
     }
   }
@@ -605,6 +623,7 @@
 
   /* ── Unit DOM rendering ───────────────────────────────────────── */
   function _renderAllUnits() {
+    _markTargetRows();
     var hints = _computeHints();
 
     // Clear cell highlights
@@ -649,6 +668,13 @@
       // Counter-rotate the inner wrapper
       var inner = el.querySelector('.twp-inner');
       if (inner) inner.style.transform = 'rotate(' + (-_boardRot) + 'deg)';
+
+      // Update facing indicator rotation
+      var facingEl = el.querySelector('.twp-facing');
+      if (facingEl) {
+        var FROT = { N: -90, S: 90, E: 0, W: 180 };
+        facingEl.style.transform = 'rotate(' + (FROT[unit.facing] || 0) + 'deg)';
+      }
 
       _updateHpPips(el, unit);
     });
@@ -758,6 +784,13 @@
       hpBar.appendChild(pip);
     }
     inner.appendChild(hpBar);
+
+    // Facing indicator — blue ">"
+    var fInd = document.createElement('span');
+    fInd.className = 'twp-facing';
+    fInd.textContent = '>';
+    inner.appendChild(fInd);
+
     el.appendChild(inner);
     return el;
   }
