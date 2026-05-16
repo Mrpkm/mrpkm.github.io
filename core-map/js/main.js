@@ -66,4 +66,33 @@
       window.open('../docs/rules/game_core.md', '_blank');
     });
   }
+
+  var btnEconomy = document.getElementById('btn-economy');
+  if (btnEconomy) {
+    btnEconomy.addEventListener('click', function () {
+      var panel = document.getElementById('economy-panel');
+      if (!panel) return;
+      var visible = panel.style.display !== 'none';
+      panel.style.display = visible ? 'none' : '';
+      if (!visible) {
+        // Populate from current GameState
+        try {
+          var s = window.GameState.getState();
+          var wp = s.warPoints;
+          var setEl = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+          setEl('econ-budget',  wp.budget);
+          setEl('econ-units',   wp.spent.units);
+          setEl('econ-xp',      wp.spent.xp);
+          setEl('econ-bonuses', wp.spent.bonuses);
+          setEl('econ-spent',   wp.spent.total);
+          var left = wp.remaining;
+          var leftEl = document.getElementById('econ-left');
+          if (leftEl) {
+            leftEl.textContent = left;
+            leftEl.style.color = left < 0 ? 'var(--red)' : 'var(--green)';
+          }
+        } catch (e) {}
+      }
+    });
+  }
 })();

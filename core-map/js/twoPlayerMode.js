@@ -23,6 +23,7 @@
   var _p2BriefCode   = null;     // separate P2 brief (dual-brief mode)
   var _panelWired    = false;
   var _flashTimeout  = null;
+  var _endOverlayShown = false;  // track if end-game overlay was shown once
 
   var SHORT = { Infantry:'INF', Cavalry:'CAV', Tanks:'TNK', Motorized:'MOT', Artillery:'ART' };
   var STORAGE_BRIEF = 'twp_last_brief';
@@ -83,22 +84,59 @@
 
   /* ── Build initial state (shared by start / newGame) ──────── */
   function _activate(units) {
-    _active        = true;
-    _currentPlayer = 1;
-    _mode          = 'move';
-    _selectedId    = null;
-    _winner        = null;
-    _turnNo        = 1;
-    _boardRot      = 0;
-    _log           = [{ kind: 'turn', text: '◆ PLAYER 1 — TURN 1 ◆' }];
-    _units         = units;
+    // Guard: if no units, show warning instead of blank game
+    if (!units || units.length === 0) {
+      _showNoUnitsWarning();
+      return;
+    }
+
+    _active            = true;
+    _currentPlayer     = 1;
+    _mode              = 'move';
+    _selectedId        = null;
+    _winner            = null;
+    _endOverlayShown   = false;
+    _turnNo            = 1;
+    _boardRot          = 0;
+    _log               = [{ kind: 'turn', text: '◆ PLAYER 1 — TURN 1 ◆' }];
+    _units             = units;
 
     document.querySelectorAll('#map-root .unit, #map-root .twp-unit').forEach(function (el) { el.remove(); });
     _unitEls = {};
 
+    _applyZoneOverlays();
     _renderAllUnits();
     _showPanel();
     _renderDossier();
+  }
+
+  /* ── Red/Blue zone overlays ───────────────────────────────── */
+  function _applyZoneOverlays() {
+    var midRow = Math.floor(_gridRows / 2);
+    document.querySelectorAll('#map-root .cell').forEach(function (el) {
+      el.classList.remove('twp-zone-red', 'twp-zone-blue');
+      var r = parseInt(el.dataset.row, 10);
+      if (r <= midRow) el.classList.add('twp-zone-blue');
+      else             el.classList.add('twp-zone-red');
+    });
+  }
+
+  function _clearZoneOverlays() {
+    document.querySelectorAll('#map-root .cell').forEach(function (el) {
+      el.classList.remove('twp-zone-red', 'twp-zone-blue');
+    });
+  }
+
+  /* ── No-units warning ─────────────────────────────────────── */
+  function _showNoUnitsWarning() {
+    var noUnitsEl = document.getElementById('twp-no-units');
+    if (noUnitsEl) noUnitsEl.style.display = '';
+    var normal   = document.getElementById('normal-dossier-content');
+    var overview = document.querySelector('.overview');
+    var twpPanel = document.getElementById('twp-panel');
+    if (normal)   normal.style.display   = 'none';
+    if (overview) overview.style.display = 'none';
+    if (twpPanel) twpPanel.style.display = 'none';
   }
 
   /* ── Start with default layout (reads demo grid) ──────────── */
@@ -294,7 +332,9 @@
     var sel = _units.find(function (u) { return u.id === _selectedId; });
     if (!sel) { _selectedId = null; _renderAllUnits(); _renderDossier(); return; }
 
+    // In rotate mode: clicking own cell does nothing (avoids accidental deselect)
     if (occ && occ.id === _selectedId) {
+      if (_mode === 'rotate') return;
       _selectedId = null; _renderAllUnits(); _renderDossier(); return;
     }
     if (occ && occ.player === _currentPlayer && occ.actionsRemaining > 0) {
@@ -332,13 +372,15 @@
     var biomeNames = { P:'PLAIN', F:'FOREST', M:'MOUNTAIN', S:'SWAMP' };
     _mutate(unit.id, {
       row: tr, col: tc, facing: f,
-      actionsRemaining: unit.actionsRemaining - 1,
+      actionsRemaining: Math.max(0, unit.actionsRemaining - 1),
       turnsStill: 0, trenched: false, movedThisTurn: true,
     });
     _pushLog({ kind:'mv', text: SHORT[unit.type]+' P'+unit.player+' → ('+tr+','+tc+') ['+
       (biomeNames[_biomeAt(tr,tc)]||'PLAIN')+']'+(unit.trenched?' (trench lost)':'')+'.' });
     var upd = _units.find(function (u) { return u.id === unit.id; });
     if (upd && upd.actionsRemaining <= 0) _selectedId = null;
+    _checkWinner();
+    _checkEndReached();
     _renderAllUnits(); _renderDossier();
   }
 
@@ -353,7 +395,7 @@
       detail: _detail(attacker, defender, r, newHp),
     });
 
-    _mutate(attacker.id, { actionsRemaining: attacker.actionsRemaining - 1 });
+    _mutate(attacker.id, { actionsRemaining: Math.max(0, attacker.actionsRemaining - 1) });
     _mutate(defender.id, { hp: newHp });
     if (newHp <= 0) _removeUnit(defender.id);
     _flashCell(defender.row, defender.col);
@@ -416,15 +458,17 @@
 
   /* ── New Game (preserves brief if one was loaded) ──────────── */
   function newGame() {
-    _currentPlayer = 1;
-    _mode          = 'move';
-    _selectedId    = null;
-    _winner        = null;
-    _turnNo        = 1;
-    _boardRot      = 0;
-    _log           = [{ kind:'turn', text: '◆ PLAYER 1 — TURN 1 ◆' }];
+    _currentPlayer   = 1;
+    _mode            = 'move';
+    _selectedId      = null;
+    _winner          = null;
+    _endOverlayShown = false;
+    _turnNo          = 1;
+    _boardRot        = 0;
+    _log             = [{ kind:'turn', text: '◆ PLAYER 1 — TURN 1 ◆' }];
 
     document.querySelectorAll('#map-root .twp-unit').forEach(function (el) { el.remove(); });
+    _clearZoneOverlays();
     _unitEls = {};
 
     if (_p1BriefCode || _p2BriefCode) {
@@ -451,8 +495,21 @@
   function _checkWinner() {
     var p1 = _units.some(function (u) { return u.player === 1; });
     var p2 = _units.some(function (u) { return u.player === 2; });
-    if (!p1) { _winner = 2; _pushLog({ kind:'turn', text: '★ PLAYER 2 WINS ★' }); }
-    else if (!p2) { _winner = 1; _pushLog({ kind:'turn', text: '★ PLAYER 1 WINS ★' }); }
+    if (!p1) { _winner = 2; _pushLog({ kind:'turn', text: '★ PLAYER 2 WINS — ALL ENEMY FORCES ELIMINATED ★' }); }
+    else if (!p2) { _winner = 1; _pushLog({ kind:'turn', text: '★ PLAYER 1 WINS — ALL ENEMY FORCES ELIMINATED ★' }); }
+  }
+
+  function _checkEndReached() {
+    if (_winner) return;
+    var p1Reached = _units.some(function (u) { return u.player === 1 && u.row === 1; });
+    var p2Reached = _units.some(function (u) { return u.player === 2 && u.row === _gridRows; });
+    if (p1Reached) {
+      _winner = 1;
+      _pushLog({ kind: 'turn', text: '★ PLAYER 1 BREACHED ENEMY LINES — P1 WINS ★' });
+    } else if (p2Reached) {
+      _winner = 2;
+      _pushLog({ kind: 'turn', text: '★ PLAYER 2 BREACHED ENEMY LINES — P2 WINS ★' });
+    }
   }
   function _pushLog(entry) {
     _log.push(entry);
@@ -513,13 +570,23 @@
       var cellEl = window.MapRenderer.getCellEl(unit.row, unit.col);
       if (!cellEl) return;
 
+      var isNew = !_unitEls[unit.id];
       var el = _unitEls[unit.id];
       if (!el) { el = _buildUnitEl(unit); _unitEls[unit.id] = el; }
       if (el.parentElement !== cellEl) cellEl.appendChild(el);
 
-      el.className = 'unit twp-unit twp-p' + unit.player +
-        (unit.id === _selectedId ? ' twp-selected' : '') +
-        (unit.actionsRemaining <= 0 ? ' twp-exhausted' : '');
+      // Use classList instead of className= to avoid resetting CSS animations
+      var wantSelected  = unit.id === _selectedId;
+      var wantExhausted = unit.actionsRemaining <= 0;
+      el.classList.toggle('twp-selected',  wantSelected);
+      el.classList.toggle('twp-exhausted', wantExhausted);
+
+      // Force animation start on new elements (handles GIF delay)
+      if (isNew) {
+        el.style.animationPlayState = 'running';
+        // Trigger reflow so animation starts from frame 0 consistently
+        void el.offsetWidth;
+      }
 
       // Counter-rotate the inner wrapper
       var inner = el.querySelector('.twp-inner');
@@ -723,7 +790,21 @@
       if (_winner) {
         var wt = document.getElementById('twp-winner-text');
         if (wt) wt.textContent = 'PLAYER ' + _winner + ' WINS';
+        var ws = document.getElementById('twp-winner-sub');
+        var lastLog = _log[_log.length - 1];
+        if (ws && lastLog) ws.textContent = lastLog.text;
       }
+    }
+    // Show full-map overlay when game ends (only once per game)
+    var endOverlay = document.getElementById('twp-end-overlay');
+    if (endOverlay && _winner && !_endOverlayShown) {
+      _endOverlayShown = true;
+      endOverlay.style.display = 'flex';
+      var et = document.getElementById('twp-end-text');
+      if (et) et.textContent = 'PLAYER ' + _winner + ' WINS';
+      var lastL = _log[_log.length - 1];
+      var es = document.getElementById('twp-end-sub');
+      if (es && lastL) es.textContent = lastL.text.replace(/★/g, '').trim();
     }
   }
 

@@ -156,26 +156,34 @@
     patch: () => panel(`
       <header>
         <h2>Patch Notes</h2>
-        <span class="stamp">v1.4.2</span>
+        <span class="stamp">v1.5.0</span>
       </header>
-      <p class="meta">Released 06 JUN 1944 &mdash; Operation Overlord update</p>
+      <p class="meta">Latest build &mdash; field update</p>
       <div class="patch">
-        <h3>Balance</h3>
+        <h3>New Win Condition</h3>
         <ul>
-          <li><span class="tag bal">BAL</span>Airborne drop accuracy +12% in stormy weather.</li>
-          <li><span class="tag bal">BAL</span>Panzer IV armor reduced from 80 to 75.</li>
-          <li><span class="tag bal">BAL</span>Supply convoys now require 2 escort units instead of 3.</li>
+          <li><span class="tag add">ADD</span>Map is now visually divided into a red zone (P1) and blue zone (P2) with a tinted overlay.</li>
+          <li><span class="tag add">ADD</span>Game ends when any unit reaches the far end of the map (the enemy's starting side). A full-screen end-game overlay displays the result.</li>
+          <li><span class="tag bal">BAL</span>Eliminating all enemy units still ends the game as before.</li>
+        </ul>
+        <h3>Interface Overhaul</h3>
+        <ul>
+          <li><span class="tag add">ADD</span>Briefing input replaced with a modal dialog button. The only place to create briefings is the Pre-Game Setup screen.</li>
+          <li><span class="tag add">ADD</span>Pre-Game Setup now saves all settings to local memory &mdash; switching tabs or navigating away no longer resets your army.</li>
+          <li><span class="tag add">ADD</span>Reset button added to Pre-Game Setup header to clear saved state.</li>
+          <li><span class="tag add">ADD</span>Warning shown when attempting to deploy with no units placed on the map.</li>
+          <li><span class="tag add">ADD</span>AI Game button is now blurred and disabled with &ldquo;Coming Soon&rdquo; tooltip.</li>
         </ul>
         <h3>Bug Fixes</h3>
         <ul>
-          <li><span class="tag fix">FIX</span>Fixed crash when scrolling the tactical map past Cherbourg.</li>
-          <li><span class="tag fix">FIX</span>Compass no longer rotates 360&deg; when entering hedgerows.</li>
-          <li><span class="tag fix">FIX</span>Field telephone rings forever after disconnect.</li>
+          <li><span class="tag fix">FIX</span>Rotate button now works correctly &mdash; clicking a unit&rsquo;s own cell in Rotate mode no longer deselects it.</li>
+          <li><span class="tag fix">FIX</span>Actions Remaining can no longer go below 0 after combat or movement.</li>
+          <li><span class="tag fix">FIX</span>Unit bobbing animations now start immediately when the game begins, not only after the first input.</li>
+          <li><span class="tag fix">FIX</span>Game rules version updated to match patch notes (v1.5.0).</li>
         </ul>
-        <h3>Additions</h3>
+        <h3>Economy</h3>
         <ul>
-          <li><span class="tag add">ADD</span>5 new beach landing maps.</li>
-          <li><span class="tag add">ADD</span>Weather system: fog reduces visibility but masks movement.</li>
+          <li><span class="tag add">ADD</span>War-point budget, spent, and remaining values shown in the Briefing Dossier.</li>
         </ul>
       </div>
     `),
@@ -183,31 +191,37 @@
     whatsnew: () => panel(`
       <header>
         <h2>What's New?</h2>
-        <span class="stamp">Latest</span>
+        <span class="stamp">v1.5.0</span>
       </header>
-      <p class="meta">Field bulletin &mdash; read before deployment</p>
+      <p class="meta">Field bulletin &mdash; v1.5.0 update</p>
 
       <div class="letter urgent">
-        <div class="from"><span><strong>NEW</strong> &middot; Co-op Campaign</span><span>Just dropped</span></div>
-        <div>Two-player operations across the entire Normandy theater.
-          Coordinate over the field telephone &mdash; voice chat baked in.</div>
+        <div class="from"><span><strong>NEW</strong> &middot; Territory Win Condition</span><span>v1.5.0</span></div>
+        <div>The map is now divided into a Red side and Blue side with a colored overlay.
+          Race your units to the enemy&rsquo;s starting edge to win by breakthrough &mdash;
+          or destroy all opposition the old-fashioned way.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Faction Rework &middot; Allied</span><span>This week</span></div>
-        <div>Allied infantry now field designated marksmen. Squad composition
-          rules updated &mdash; see Game Rules &sect; 03.</div>
+        <div class="from"><span>Briefing Manager Overhaul</span><span>v1.5.0</span></div>
+        <div>Pre-Game Setup is now the single home for all briefing management.
+          Your army configuration is auto-saved to local memory so switching doctrine
+          tabs or leaving the page no longer erases your work. A Reset button is available
+          in the header if you want to start fresh.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Seasonal Event &middot; D-Day</span><span>Limited</span></div>
-        <div>Log in any time before 30 JUN to receive the commemorative
-          &ldquo;Lt. Johnson&rdquo; portrait frame and the JUNE 1944 calendar emote.</div>
+        <div class="from"><span>Bug Fixes &amp; Polish</span><span>v1.5.0</span></div>
+        <div>Rotate mode fixed (clicking your own unit no longer deselects it).
+          Action counters no longer go negative.
+          Unit animations now start immediately at battle start.
+          AI Game is temporarily disabled &mdash; coming in a future update.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Quality of Life</span><span>Misc.</span></div>
-        <div>Auto-save every 5 minutes. Replays now exportable as film reels.</div>
+        <div class="from"><span>Economy Display</span><span>v1.5.0</span></div>
+        <div>War-point budget, spending, and remaining balance are now shown in the
+          Briefing Dossier during play.</div>
       </div>
     `),
 
@@ -284,7 +298,7 @@
     rules: () => panel(`
       <header>
         <h2>Game Rules</h2>
-        <span class="stamp">v0.18 &mdash; Closed</span>
+        <span class="stamp">v1.5.0 &mdash; Closed</span>
       </header>
       <p class="meta">Consolidated ruleset &mdash; base rules functionally closed</p>
 
@@ -601,11 +615,11 @@
 
       <!-- ============ OPEN QUESTIONS ============ -->
       <div class="rules-section" data-rsec="open">
-        <h3>Status (v0.18) &mdash; Functionally Closed</h3>
-        <p>All non-UI open questions are resolved as of v0.18. The only items
+        <h3>Status (v1.5.0) &mdash; Functionally Closed</h3>
+        <p>All non-UI open questions are resolved as of v1.5.0. The only items
         remaining live entirely in <span class="doc-name">ui_and_feedback.md</span>.</p>
 
-        <h3>Recently Resolved (v0.18)</h3>
+        <h3>Recently Resolved (v1.5.0)</h3>
         <ul>
           <li><strong>Minimum damage floor:</strong> 1, with the Blitzkrieg bounce exception.</li>
           <li><strong>Rotation timing:</strong> free, anytime, multiple per turn, also pre-game.</li>

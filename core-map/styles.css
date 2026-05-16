@@ -1054,3 +1054,196 @@ body::after {
   font-family: 'Courier Prime', monospace;
   letter-spacing: 0;
 }
+
+/* ── Load-bar new button styles ─────────────────────────────── */
+.load-bar-btn {
+  padding: 5px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink-dark);
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: background .12s;
+}
+.load-bar-btn:hover { background: #fff5d6; }
+.load-bar-link {
+  padding: 5px 12px;
+  white-space: nowrap;
+  color: var(--teal);
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 2px;
+  border: 1px solid rgba(111,211,214,0.45);
+  background: rgba(111,211,214,0.04);
+  text-decoration: none;
+  transition: background .15s;
+}
+.load-bar-link:hover { background: rgba(111,211,214,0.14); }
+
+/* ── Briefing modal ──────────────────────────────────────────── */
+#brief-modal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(10,8,4,0.82);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+#brief-modal-inner {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 6px var(--paper-dark), 0 0 0 8px var(--ink), 0 30px 70px rgba(0,0,0,0.8);
+  padding: 24px 28px 26px;
+  width: min(560px, 92vw);
+}
+.bm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+}
+.bm-title {
+  font-family: 'Special Elite', monospace;
+  font-size: 18px;
+  letter-spacing: 4px;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+.bm-close {
+  background: transparent; border: none; cursor: pointer;
+  font-size: 16px; color: var(--red); padding: 2px 6px;
+  font-family: 'Special Elite', monospace;
+}
+.bm-close:hover { background: rgba(178,43,43,0.1); }
+.bm-desc {
+  font-family: 'Courier Prime', monospace;
+  font-size: 13px;
+  color: var(--olive);
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.bm-link { color: var(--red); }
+#brief-modal-input {
+  width: 100%;
+  height: 120px;
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  background: var(--ink-dark);
+  color: #d9e8e9;
+  border: 1px solid rgba(111,211,214,0.4);
+  padding: 8px 10px;
+  resize: vertical;
+  outline: none;
+  display: block;
+  margin-bottom: 10px;
+}
+#brief-modal-input:focus { border-color: var(--teal); }
+.bm-actions { display: flex; gap: 8px; }
+.bm-btn-primary {
+  padding: 8px 18px;
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  background: var(--ink);
+  color: var(--teal);
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}
+.bm-btn-primary:hover { background: #3a2c1f; }
+.bm-btn-cancel {
+  padding: 8px 14px;
+  font-family: 'Special Elite', monospace;
+  font-size: 12px;
+  letter-spacing: 2px;
+  background: transparent;
+  color: var(--olive);
+  border: 1px solid var(--olive);
+  cursor: pointer;
+}
+.bm-btn-cancel:hover { background: rgba(107,78,42,0.1); }
+#brief-modal-error {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  color: #ff9090;
+  margin-top: 8px;
+  min-height: 16px;
+}
+
+/* ── Red/Blue zone overlays ──────────────────────────────────── */
+.cell.twp-zone-blue:not(.legal-move):not(.attack-target)::after {
+  background: rgba(60, 90, 200, 0.18);
+}
+.cell.twp-zone-red:not(.legal-move):not(.attack-target)::after {
+  background: rgba(200, 60, 60, 0.20);
+}
+
+/* ── No-units warning overlay ────────────────────────────────── */
+#twp-no-units {
+  position: fixed; inset: 0;
+  background: rgba(10,8,4,0.90);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#twp-no-units-inner {
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 6px var(--paper-dark), 0 0 0 8px var(--ink), 0 30px 70px rgba(0,0,0,0.8);
+  padding: 32px 36px;
+  max-width: 500px;
+  text-align: center;
+}
+
+/* ── End-game full overlay ───────────────────────────────────── */
+#twp-end-overlay {
+  position: fixed; inset: 0;
+  background: rgba(10,8,4,0.88);
+  z-index: 160;
+  align-items: center;
+  justify-content: center;
+}
+#twp-end-inner {
+  text-align: center;
+  padding: 40px 48px;
+  border: 2px solid var(--teal);
+  background: rgba(10,8,4,0.95);
+  box-shadow: 0 0 40px rgba(111,211,214,0.25), 0 0 0 1px rgba(111,211,214,0.15);
+}
+
+/* ── AI Game "coming soon" ───────────────────────────────────── */
+.cmd-card.coming-soon {
+  filter: blur(2px) grayscale(0.5);
+  pointer-events: none;
+  cursor: default;
+  position: relative;
+}
+.cmd-card-wrapper {
+  position: relative;
+}
+.cmd-card-wrapper:hover .coming-soon-badge {
+  opacity: 1;
+}
+.coming-soon-badge {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Special Elite', monospace;
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: var(--red);
+  background: rgba(239,226,196,0.95);
+  padding: 6px 14px;
+  border: 2px solid var(--red);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .18s;
+  white-space: nowrap;
+  z-index: 10;
+}

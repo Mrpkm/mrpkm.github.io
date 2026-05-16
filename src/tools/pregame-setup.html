@@ -1304,6 +1304,7 @@ function BriefingPage({ doctrineId, setup }) {
   const md = useMemo(() => generateMD(doctrineId, setup), [doctrineId, setup]);
   const [copied, setCopied] = useState(false);
   const twpPhase = localStorage.getItem('twp_setup_phase');
+  const hasUnits = (setup.placements || []).length > 0;
   function copy() {
     navigator.clipboard.writeText(md).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
   }
@@ -1346,11 +1347,26 @@ function BriefingPage({ doctrineId, setup }) {
         <div className="brief-actions">
           <button className="btn" onClick={copy}>{copied ? '✓ copied' : 'Copy .md'}</button>
           <button className="btn alt" onClick={download}>Download .md</button>
-          <button className="btn alt" onClick={deploy} style={{background:'#4a6b3a', borderColor:'#4a6b3a', letterSpacing:'3px'}}>
+          <button className="btn alt" onClick={deploy} style={{background: hasUnits ? '#4a6b3a' : '#6b3a3a', borderColor: hasUnits ? '#4a6b3a' : '#6b3a3a', letterSpacing:'3px'}} title={hasUnits ? '' : 'Place units on the map first (MAP tab)'}>
             {twpPhase === '1' ? 'DONE — PLAYER 1 ▸' : twpPhase === '2' ? '▶ DEPLOY TO BATTLE' : '▶ Deploy to Game'}
           </button>
         </div>
       </header>
+      {!hasUnits && (
+        <div style={{
+          background:'rgba(157,42,42,0.12)', border:'2px solid var(--red)', padding:'12px 16px',
+          fontFamily:"'Special Elite', monospace", letterSpacing:'2px', color:'var(--red)',
+          marginBottom:'14px', display:'flex', alignItems:'center', gap:'12px',
+        }}>
+          <span style={{fontSize:'20px'}}>⚠</span>
+          <span style={{fontSize:'13px'}}>
+            No units placed on the map. Open the <b>MAP</b> folder and drop units onto your deploy zone before deploying to the game.<br/>
+            <span style={{fontFamily:"'VT323', monospace", fontSize:'15px', letterSpacing:'1px', color:'var(--ink-soft)'}}>
+              Units in the army without positions will not appear in battle.
+            </span>
+          </span>
+        </div>
+      )}
       <div className="brief-cols">
         <div className="card">
           <div className="card-head">
@@ -1377,12 +1393,33 @@ function BriefingPage({ doctrineId, setup }) {
   );
 }
 
+const SETUP_STORAGE_KEY = 'pregame_setup_state';
+
+function loadSavedState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETUP_STORAGE_KEY) || 'null');
+    if (saved && saved.doctrineId && DOCTRINES[saved.doctrineId]) return saved;
+  } catch (e) {}
+  return null;
+}
+
 function App() {
-  const [doctrineId, setDoctrineId] = useState('blitzkrieg');
-  const [setup, setSetup] = useState(() => ({ ...newSetup(), placements: [] }));
-  const [tab, setTab] = useState('blitzkrieg');
-  const [subtab, setSubtab] = useState('roster');
+  const savedState = loadSavedState();
+  const [doctrineId, setDoctrineId] = useState(savedState ? savedState.doctrineId : 'blitzkrieg');
+  const [setup, setSetup] = useState(() => {
+    if (savedState && savedState.setup) return { ...newSetup(), ...savedState.setup, placements: savedState.setup.placements || [] };
+    return { ...newSetup(), placements: [] };
+  });
+  const [tab, setTab] = useState(savedState ? (savedState.tab || savedState.doctrineId) : 'blitzkrieg');
+  const [subtab, setSubtab] = useState(savedState ? (savedState.subtab || 'roster') : 'roster');
   const twpPhase = localStorage.getItem('twp_setup_phase'); // '1', '2', or null
+
+  // Persist state to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify({ doctrineId, setup, tab, subtab }));
+    } catch (e) {}
+  }, [doctrineId, setup, tab, subtab]);
 
   const tabs = [
     { id: 'blitzkrieg', label: 'BLITZKRIEG',     icon: '../../assets/game-icons/blitzkrieg.png',          chroma: null    },
@@ -1394,6 +1431,14 @@ function App() {
   function pickDoctrine(id) {
     setDoctrineId(id); setTab(id);
     setSetup({ ...newSetup(), placements: [] });
+    setSubtab('roster');
+  }
+
+  function resetAll() {
+    localStorage.removeItem(SETUP_STORAGE_KEY);
+    setDoctrineId('blitzkrieg');
+    setSetup({ ...newSetup(), placements: [] });
+    setTab('blitzkrieg');
     setSubtab('roster');
   }
 
@@ -1434,6 +1479,11 @@ function App() {
           </div>
         </div>
         <div className="hs-right">
+          <button onClick={resetAll} title="Reset all setup to defaults and clear saved state" style={{
+            appearance:'none', border:'1px solid rgba(240,230,205,0.45)', background:'transparent',
+            color:'rgba(240,230,205,0.7)', fontFamily:"'Special Elite', monospace", fontSize:'11px',
+            letterSpacing:'2px', padding:'5px 10px', cursor:'pointer', marginRight:'10px',
+          }}>↺ RESET</button>
           <Stamp color="#9d2a2a">SECTION 1</Stamp>
           <div className="hs-page">page <b>1</b> / 4</div>
         </div>

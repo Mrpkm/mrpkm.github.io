@@ -15,9 +15,30 @@
   <!-- ── Command bar (always visible) ── -->
   <div id="load-bar">
     <a href="../src/menu/Strategy%20Game%20Menu.html" id="back-btn">← BACK TO HQ</a>
-    <textarea id="paste-textarea" placeholder="// PASTE PRE-GAME BRIEFING CODE…"></textarea>
-    <button id="btn-load">LOAD</button>
+    <button id="btn-open-brief-modal" class="load-bar-btn">▸ LOAD BRIEFING</button>
+    <a href="../src/tools/pregame-setup.html" class="load-bar-link">⚙ PRE-GAME SETUP</a>
     <span id="parse-error"></span>
+  </div>
+
+  <!-- Hidden: kept for backward compat with input.js -->
+  <textarea id="paste-textarea" style="display:none;"></textarea>
+  <button id="btn-load" style="display:none;"></button>
+
+  <!-- ── Briefing Modal ── -->
+  <div id="brief-modal">
+    <div id="brief-modal-inner">
+      <div class="bm-header">
+        <span class="bm-title">LOAD BRIEFING</span>
+        <button id="brief-modal-close" class="bm-close">✕</button>
+      </div>
+      <p class="bm-desc">Paste your Pre-Game Briefing code below. Generate one in the <a href="../src/tools/pregame-setup.html" class="bm-link">Pre-Game Setup</a> screen.</p>
+      <textarea id="brief-modal-input" placeholder="// Paste Pre-Game Briefing Code here…"></textarea>
+      <div class="bm-actions">
+        <button id="brief-modal-load" class="bm-btn-primary">▸ LOAD MAP</button>
+        <button id="brief-modal-cancel" class="bm-btn-cancel">CANCEL</button>
+      </div>
+      <div id="brief-modal-error"></div>
+    </div>
   </div>
 
   <!-- ── Stage holds either the empty desk or the field map ── -->
@@ -174,8 +195,26 @@
             <div class="sel-empty">No unit selected. Click a token on the map.</div>
           </div>
 
+          <!-- Economy panel (hidden by default, toggled by button) -->
+          <div id="economy-panel" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(239,226,196,0.55);border:1px solid var(--ink);">
+            <div style="font-family:'Special Elite',monospace;font-size:11px;letter-spacing:2px;color:var(--red);border-bottom:1px dashed var(--olive);padding-bottom:4px;margin-bottom:8px;">WAR-POINT ECONOMY</div>
+            <div class="wp-bar" style="font-size:18px;">
+              BUDGET <span class="nb" id="econ-budget">—</span>
+            </div>
+            <div style="font-family:'VT323',monospace;font-size:14px;color:var(--olive);letter-spacing:1px;margin-top:4px;">
+              UNITS <span id="econ-units" style="color:var(--ink);">—</span> &middot;
+              XP <span id="econ-xp" style="color:var(--ink);">—</span> &middot;
+              BONUSES <span id="econ-bonuses" style="color:var(--ink);">—</span>
+            </div>
+            <div class="wp-bar" style="margin-top:6px;font-size:18px;">
+              SPENT <span class="nb" id="econ-spent">—</span> &middot;
+              LEFT <span id="econ-left" style="font-family:'VT323',monospace;font-size:18px;color:var(--green);">—</span>
+            </div>
+          </div>
+
           <div class="action-row">
             <button id="btn-clear">↩ Clear Map</button>
+            <button id="btn-economy">⊕ Economy</button>
             <button id="btn-rules">Rules</button>
             <button id="btn-setup" class="danger">New Briefing</button>
           </div>
@@ -229,16 +268,11 @@
           </div>
 
           <h4>Briefing</h4>
-          <div style="font-family:'VT323',monospace;font-size:12px;color:var(--olive);letter-spacing:1px;margin-bottom:4px;">
-            Paste a Pre-Game Briefing code to load a custom map &amp; army. Saved until you change it.
+          <div style="font-family:'VT323',monospace;font-size:12px;color:var(--olive);letter-spacing:1px;margin-bottom:6px;">
+            Load a custom briefing via the button above, or open Pre-Game Setup to build one.
           </div>
-          <textarea id="twp-brief-input"
-            placeholder="// Paste Pre-Game Briefing here…"
-            style="width:100%;height:56px;font-family:'Courier Prime',monospace;font-size:10px;
-                   background:var(--ink-dark,#1a1208);color:#d9e8e9;border:1px solid rgba(111,211,214,0.4);
-                   padding:4px 6px;resize:vertical;outline:none;"></textarea>
           <div style="display:flex;gap:4px;margin-top:4px;">
-            <button id="twp-btn-load-brief" style="flex:2;font-family:'Special Elite',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 0;border:1px solid var(--ink);background:var(--paper-light);color:var(--ink);cursor:pointer;">▸ Load</button>
+            <button id="twp-btn-load-brief" style="flex:2;font-family:'Special Elite',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 0;border:1px solid var(--ink);background:var(--paper-light);color:var(--ink);cursor:pointer;">▸ Load Briefing</button>
             <button id="twp-btn-clear-brief" style="flex:1;font-family:'Special Elite',monospace;font-size:10px;letter-spacing:1.5px;padding:5px 0;border:1px solid var(--olive);background:transparent;color:var(--olive);cursor:pointer;">↺ Default</button>
           </div>
           <div id="twp-brief-status" style="font-family:'VT323',monospace;font-size:12px;color:var(--olive);letter-spacing:1px;margin-top:3px;min-height:16px;"></div>
@@ -254,7 +288,7 @@
           <!-- Winner overlay inside dossier -->
           <div id="twp-winner" style="display:none;margin-top:14px;padding:14px;background:var(--ink);border:2px solid var(--teal);text-align:center;">
             <div id="twp-winner-text" style="font-family:'Special Elite',monospace;font-size:20px;color:var(--teal);letter-spacing:4px;">PLAYER 1 WINS</div>
-            <div style="font-family:'Courier Prime',monospace;font-size:11px;color:var(--paper-dark);margin-top:6px;">The opposing force has been routed.</div>
+            <div id="twp-winner-sub" style="font-family:'VT323',monospace;font-size:13px;color:var(--paper-dark);margin-top:6px;letter-spacing:1px;"></div>
           </div>
 
         </div><!-- /#twp-panel -->
@@ -265,7 +299,38 @@
 
   </div>
 
-  <div id="hint">▸ Drop a briefing on the desk, or pick a routine</div>
+  <!-- ── No-units warning (shown when game starts with 0 units) ── -->
+  <div id="twp-no-units" style="display:none;">
+    <div id="twp-no-units-inner">
+      <div style="font-family:'Special Elite',monospace;font-size:22px;letter-spacing:3px;color:var(--teal);margin-bottom:12px;">NO UNITS DEPLOYED</div>
+      <p style="font-family:'Courier Prime',monospace;font-size:14px;color:var(--paper);line-height:1.6;margin-bottom:18px;">
+        Open the unit-to-map editor in your doctrine menu to continue.<br>
+        You must place units on the board before launching a battle.
+      </p>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <a href="../src/tools/pregame-setup.html" style="font-family:'Special Elite',monospace;font-size:12px;letter-spacing:2px;padding:8px 18px;border:1px solid var(--teal);color:var(--teal);text-decoration:none;background:rgba(111,211,214,0.08);">⚙ OPEN PRE-GAME SETUP</a>
+        <button onclick="document.getElementById('twp-no-units').style.display='none';document.getElementById('desk-view').style.display='';document.getElementById('map-view').classList.remove('active');" style="font-family:'Special Elite',monospace;font-size:12px;letter-spacing:2px;padding:8px 18px;border:1px solid var(--olive);color:var(--olive);background:transparent;cursor:pointer;">← BACK TO DESK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── End-game full-map overlay ── -->
+  <div id="twp-end-overlay" style="display:none;">
+    <div id="twp-end-inner">
+      <div style="font-family:'VT323',monospace;font-size:16px;letter-spacing:4px;color:var(--teal);opacity:0.7;margin-bottom:8px;">BATTLE OVER</div>
+      <div id="twp-end-text" style="font-family:'Special Elite',monospace;font-size:38px;letter-spacing:6px;color:var(--teal);text-shadow:0 0 20px rgba(111,211,214,0.6);">PLAYER 1 WINS</div>
+      <div id="twp-end-sub" style="font-family:'VT323',monospace;font-size:16px;color:var(--paper);margin-top:10px;letter-spacing:2px;opacity:0.85;"></div>
+      <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
+        <button onclick="document.getElementById('twp-end-overlay').style.display='none';" style="font-family:'Special Elite',monospace;font-size:13px;letter-spacing:2px;padding:10px 22px;border:1px solid var(--teal);color:var(--teal);background:rgba(111,211,214,0.08);cursor:pointer;">VIEW BOARD</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="hint">▸ Load a briefing or pick a routine from the desk</div>
+
+  <!-- Preload unit GIFs so animations start immediately on first use -->
+  <link rel="preload" as="image" href="../assets/units/animations/tank/tank-move.gif" />
+  <link rel="preload" as="image" href="../assets/units/animations/cavalry/cavalry-move.gif" />
 
   <!-- Combat engine & 2-player mode -->
   <script src="js/combat.js"></script>
@@ -324,6 +389,58 @@
 
   <!-- Desk view command-button wiring -->
   <script src="js/desk.js"></script>
+
+  <!-- Briefing modal wiring -->
+  <script>
+    (function () {
+      var modal     = document.getElementById('brief-modal');
+      var modalInput = document.getElementById('brief-modal-input');
+      var modalErr  = document.getElementById('brief-modal-error');
+      var hiddenTA  = document.getElementById('paste-textarea');
+      var hiddenBtn = document.getElementById('btn-load');
+
+      function openModal() { modal.style.display = 'flex'; if (modalInput) modalInput.focus(); }
+      function closeModal() { modal.style.display = 'none'; if (modalErr) modalErr.textContent = ''; }
+
+      var openBtn = document.getElementById('btn-open-brief-modal');
+      if (openBtn) openBtn.addEventListener('click', openModal);
+
+      var closeBtn = document.getElementById('brief-modal-close');
+      if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+      var cancelBtn = document.getElementById('brief-modal-cancel');
+      if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+      modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+
+      var loadBtn = document.getElementById('brief-modal-load');
+      if (loadBtn) {
+        loadBtn.addEventListener('click', function () {
+          var code = modalInput ? modalInput.value.trim() : '';
+          if (!code) { if (modalErr) modalErr.textContent = 'Paste a briefing code first.'; return; }
+          hiddenTA.value = code;
+          hiddenBtn.click();
+          // check if parse succeeded (parse-error will be set on failure)
+          setTimeout(function () {
+            var errEl = document.getElementById('parse-error');
+            if (errEl && errEl.textContent) {
+              if (modalErr) modalErr.textContent = errEl.textContent;
+            } else {
+              closeModal();
+              if (modalInput) modalInput.value = '';
+            }
+          }, 50);
+        });
+      }
+
+      // Wire twp-btn-load-brief to open modal instead
+      var twpLoadBrief = document.getElementById('twp-btn-load-brief');
+      if (twpLoadBrief) {
+        twpLoadBrief.removeEventListener('click', twpLoadBrief._handler);
+        twpLoadBrief.addEventListener('click', openModal);
+      }
+    })();
+  </script>
 
 </body>
 </html>
