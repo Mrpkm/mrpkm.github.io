@@ -674,6 +674,14 @@
     if (compass) compass.style.transform = 'rotate(' + _boardRot + 'deg)';
   }
 
+  var UNIT_SPRITE = {
+    Infantry:  '../src/menu/assets/units/infantry.png',
+    Cavalry:   '../src/menu/assets/units/cavalry.png',
+    Tanks:     '../src/menu/assets/units/tank.png',
+    Motorized: '../src/menu/assets/units/motorized-infantry.png',
+    Artillery: '../src/menu/assets/units/artillery.png',
+  };
+
   function _buildUnitEl(unit) {
     var el = document.createElement('div');
     el.className = 'unit twp-unit twp-p' + unit.player;
@@ -684,7 +692,12 @@
     // Inner wrapper handles counter-rotation independently of bob animation
     var inner = document.createElement('div');
     inner.className = 'twp-inner';
-    inner.appendChild(window.ChromaBridge.getSprite(unit.type));
+
+    var img = document.createElement('img');
+    img.src = UNIT_SPRITE[unit.type] || UNIT_SPRITE.Infantry;
+    img.alt = unit.type;
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;pointer-events:none;';
+    inner.appendChild(img);
 
     // HP pip bar
     var hpBar = document.createElement('div');

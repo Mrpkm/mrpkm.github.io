@@ -108,7 +108,7 @@
     whatsnew:  "What's New?",
     play:      'Play Game',
     setup:     'Pre-Game Setup',
-    rules:     'Game Rules',
+    rules:     'Field Manual — How to Play?',
   };
   const cursorLabel = document.getElementById('cursor-label');
   document.querySelectorAll('.hit').forEach(el => {
@@ -262,12 +262,6 @@
             <div class="cdesc">Pick a doctrine, spend war-points, place your army on the half-board.</div>
             <span class="cstat">OPEN SETUP</span>
           </div>
-          <div class="cmd-card-p" id="card-rules-play">
-            <span class="ckey">F4</span>
-            <h4>&#9658; Field Manual</h4>
-            <div class="cdesc">Interactive 8-section rules tutorial with live mini-boards and drills.</div>
-            <span class="cstat">CONSULT</span>
-          </div>
           <div class="cmd-card-p-wrapper">
             <div class="cmd-card-p coming-soon-p" id="card-last">
               <span class="ckey">F5</span>
@@ -294,9 +288,6 @@
       document.getElementById('card-setup-play').addEventListener('click', () => {
         window.location.href = '../tools/pregame-setup.html';
       });
-      document.getElementById('card-rules-play').addEventListener('click', () => {
-        window.location.href = 'field-manual.html';
-      });
       document.getElementById('card-last').addEventListener('click', () => {
         if (localStorage.getItem('last_briefing')) {
           window.location.href = '../../core-map/index.html?action=restore';
@@ -307,11 +298,11 @@
       });
     },
 
-    rules: () => panel(`
+    rules: () => { window.location.href = 'field-manual.html'; },
+
+    _rules_old_DELETED: () => panel(`
       <header>
-        <h2>Game Rules</h2>
-        <span class="stamp">v1.5.0 &mdash; Closed</span>
-      </header>
+        <h2>DELETED</h2>
       <p class="meta">Consolidated ruleset &mdash; base rules functionally closed</p>
 
       <div class="rules-tabs" id="rules-tabs">
