@@ -73,22 +73,52 @@
   function playAttackEffect(attackerUnitId, defenderUnitId) {
     const attackerEl = _units[attackerUnitId];
     const defenderEl = _units[defenderUnitId];
-    if (!defenderEl) return;
 
-    const cellEl = defenderEl.closest('.cell');
-    if (!cellEl) return;
+    const attackerType = attackerEl ? attackerEl.dataset.unitType : 'Tanks';
+    const attackSrc = window.ChromaBridge.getAttackSpriteSrc(attackerType);
 
-    const burst = document.createElement('img');
-    burst.className = 'attack-burst';
-    burst.src = '../assets/units/animations/tank/tank-attack.gif';
-    burst.alt = '';
-    cellEl.appendChild(burst);
+    const mapRoot = document.getElementById('map-root');
 
     if (attackerEl) attackerEl.classList.add('unit--attacking');
-    defenderEl.classList.add('unit--hit');
+    if (defenderEl) defenderEl.classList.add('unit--hit');
 
+    if (mapRoot) {
+      const overlay = document.createElement('div');
+      overlay.className = 'attack-overlay';
+      mapRoot.appendChild(overlay);
+
+      window.ChromaRenderer.createGifSprite(attackSrc)
+        .then(function (result) {
+          result.el.className = 'attack-overlay__canvas';
+          overlay.appendChild(result.el);
+
+          window.setTimeout(function () {
+            result.destroy();
+            overlay.remove();
+            if (attackerEl) attackerEl.classList.remove('unit--attacking');
+            if (defenderEl) defenderEl.classList.remove('unit--hit');
+          }, 1500);
+        })
+        .catch(function () {
+          overlay.remove();
+          _fallbackBurst(defenderEl, attackerEl);
+        });
+    } else {
+      _fallbackBurst(defenderEl, attackerEl);
+    }
+  }
+
+  function _fallbackBurst(defenderEl, attackerEl) {
+    if (!defenderEl) return;
+    const cellEl = defenderEl.closest('.cell');
+    if (cellEl) {
+      const burst = document.createElement('img');
+      burst.className = 'attack-burst';
+      burst.src = '../assets/units/animations/tank/tank-attack.gif';
+      burst.alt = '';
+      cellEl.appendChild(burst);
+    }
     window.setTimeout(function () {
-      burst.remove();
       if (attackerEl) attackerEl.classList.remove('unit--attacking');
       if (defenderEl) defenderEl.classList.remove('unit--hit');
     }, 760);

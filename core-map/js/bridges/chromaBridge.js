@@ -4,9 +4,17 @@
   var SPRITE_MAP = {
     Tanks:     '../assets/units/animations/tank/tank-move.gif',
     Cavalry:   '../assets/units/animations/cavalry/cavalry-move.gif',
-    Infantry:  '../assets/game-icons/infantry.png',
-    Motorized: '../assets/game-icons/motorized.png',
-    Artillery: '../assets/game-icons/artillery.png',
+    Infantry:  '../assets/units/animations/infantry/infantry-walk.gif',
+    Motorized: '../assets/units/animations/motorized/motorized-move.gif',
+    Artillery: '../assets/units/animations/artillery/artillery-move.gif',
+  };
+
+  var ATTACK_SPRITE_MAP = {
+    Infantry:  '../assets/units/animations/infantry/infantry-attack.gif',
+    Motorized: '../assets/units/animations/motorized/motorized-attack.gif',
+    Tanks:     '../assets/units/animations/tank/tank-attack.gif',
+    Cavalry:   '../assets/units/animations/cavalry/cavalry-move.gif',
+    Artillery: '../assets/units/animations/artillery/artillery-move.gif',
   };
 
   var FALLBACK = '../assets/game-icons/infantry.png';
@@ -40,5 +48,9 @@
     return wrapper;
   }
 
-  window.ChromaBridge = { getSprite: getSprite };
+  function getAttackSpriteSrc(unitType) {
+    return ATTACK_SPRITE_MAP[unitType] || ATTACK_SPRITE_MAP['Tanks'];
+  }
+
+  window.ChromaBridge = { getSprite: getSprite, getAttackSpriteSrc: getAttackSpriteSrc };
 })();
