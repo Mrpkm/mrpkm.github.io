@@ -553,20 +553,12 @@ body::after {
 .mm-cell {
   position: relative;
   width: 18px; height: 18px;
-  border: 1px solid rgba(40, 25, 10, 0.20);
-  background-size: cover;
-  background-repeat: no-repeat;
+  border: 1px solid rgba(40, 25, 10, 0.25);
 }
-.mm-cell[data-biome="P"] { background-image: url('../assets/tiles/grass-plain.png'); }
-.mm-cell[data-biome="F"] { background-image: url('../assets/tiles/forest.png'); }
-.mm-cell[data-biome="M"] { background-image: url('../assets/tiles/mountains.png'); }
-.mm-cell[data-biome="S"] { background-image: url('../assets/tiles/swamp.png'); }
-.mm-cell::after {
-  content: "";
-  position: absolute; inset: 0;
-  background: rgba(239, 226, 196, 0.18);
-  pointer-events: none;
-}
+.mm-cell[data-biome="P"] { background-color: #8ab86a; }
+.mm-cell[data-biome="F"] { background-color: #3a6b3a; }
+.mm-cell[data-biome="M"] { background-color: #9a9080; }
+.mm-cell[data-biome="S"] { background-color: #6b7a45; }
 .mm-cell.mm-legal {
   outline: 1px solid var(--gold);
   outline-offset: -1px;

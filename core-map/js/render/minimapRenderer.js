@@ -55,7 +55,11 @@
     });
 
     var ovCoords = document.getElementById('ov-coords');
-    if (ovCoords) ovCoords.textContent = state.units.length + ' UNITS';
+    if (ovCoords) {
+      var p1 = state.units.filter(function (u) { return u.owner !== 'ai'; }).length;
+      var ai = state.units.filter(function (u) { return u.owner === 'ai'; }).length;
+      ovCoords.textContent = state.units.length > 0 ? 'YOU ' + p1 + ' · AI ' + ai : '—';
+    }
   }
 
   window.MinimapRenderer = { mountMinimap: mountMinimap };

@@ -423,21 +423,14 @@ function unitRange(type){ return {infantry:{ortho:2,diag:1},cavalry:{ortho:2,dia
 /* ── Section 01: Briefing ── */
 function SecBriefing({onAdvance}){
   const rows=6,cols=9;
-  const hq=[{r:1,c:7,side:'enemy'}];
-  const reach=useMemo(()=>{
-    const s=new Set();
-    for(let r=-3;r<=3;r++) for(let c=-3;c<=3;c++){
-      if(r===0&&c===0)continue;
-      const nr=1+r,nc=7+c;
-      if(nr<0||nr>=rows||nc<0||nc>=cols)continue;
-      s.add(key(nr,nc));
-    }
-    return s;
-  },[]);
-  const [hover,setHover]=useState(null);
+  const enemies=[
+    {id:'e1',r:0,c:6,side:'enemy',type:'infantry'},
+    {id:'e2',r:1,c:7,side:'enemy',type:'cavalry'},
+    {id:'e3',r:0,c:8,side:'enemy',type:'tank'},
+  ];
   const [u,setU]=useState({r:4,c:2,side:'player',type:'infantry'});
   const [moves,setMoves]=useState(0);
-  const inReach=reach.has(key(u.r,u.c));
+  const atFront=u.r<=1;
   return (
     <div className="doc-section">
       <div className="doc-head"><div className="left"><div className="kicker">// SECTION 01 · BRIEFING</div><h1>The Objective</h1></div><div className="stamp">CADET</div></div>
@@ -445,23 +438,21 @@ function SecBriefing({onAdvance}){
       <p>Welcome to the desk, Commander. <strong>HQ</strong> is a chess-like tactical engagement on a square grid &mdash; light and fast, but each unit dies in two or three blows unless you protect it.</p>
       <h3>How you win</h3>
       <div className="obj-grid">
-        <div className="obj-card"><div className="big">5</div><div className="lbl">Turns Occupied</div><p>A unit stays inside the enemy HQ&apos;s <strong>3&ndash;square reach</strong> for five full turns.</p></div>
+        <div className="obj-card"><div className="big">☠</div><div className="lbl">Eliminate All Enemies</div><p>Destroy every enemy unit on the board. Last standing force wins the field.</p></div>
         <div className="obj-card or">OR</div>
-        <div className="obj-card"><div className="big">20</div><div className="lbl">Damage Dealt</div><p>Cumulative damage to the enemy HQ reaches twenty. The structure falls.</p></div>
+        <div className="obj-card"><div className="big">⚑</div><div className="lbl">Breach Enemy Lines</div><p>Push a unit all the way into the enemy&apos;s back row. Front line broken.</p></div>
       </div>
       <div className="miniboard-wrap">
-        <MiniBoard rows={rows} cols={cols} hq={hq} units={[{id:'u',...u,selected:true}]} legal={reach} hoverKey={hover}
+        <MiniBoard rows={rows} cols={cols} units={[{id:'u',...u,selected:true},...enemies]}
           onCellClick={(r,c)=>{setU({...u,r,c});setMoves(m=>m+1);}}
-          onCellHover={(r,c)=>setHover(r===null?null:key(r,c))}
           coach={moves===0?{r:4,c:2,label:'click any square'}:null} scale={46} />
         <div className="mb-aside">
-          <h4>Hover &amp; click</h4>
-          <p className="hint">▸ Teal squares = within HQ reach.</p>
-          <p>{inReach?<><strong>Inside reach.</strong> Hold for 5 turns to win.</>:<><strong>Outside reach.</strong> Move closer.</>}</p>
-          <div className="kv"><span className="k">Range</span><span className="v">3 sq</span><span className="k">Hold</span><span className="v">5 turns</span><span className="k">OR Damage</span><span className="v">20 HP</span></div>
+          <h4>Click to reposition your unit</h4>
+          <p className="hint">▸ Blue = your forces &middot; Red = enemy forces.</p>
+          <p>{atFront?<><strong>Near enemy lines.</strong> Engage to eliminate, or push through to their back row.</>:<><strong>Advance or engage.</strong> Wipe out all red units, or breach their line to win.</>}</p>
+          <div className="kv"><span className="k">Win by</span><span className="v">Eliminate</span><span className="k">Or by</span><span className="v">Breach</span></div>
         </div>
       </div>
-      <div className="callout tip">If neither HQ has fallen by <strong>1000 turns</strong>, the side with more remaining HQ HP wins. Equal HP &mdash; draw.</div>
       <DrillFooter label="Drill complete — you understand the objective." onAdvance={onAdvance} />
     </div>
   );
