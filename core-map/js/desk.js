@@ -55,19 +55,22 @@
   var lastStatus = document.getElementById('last-status');
   if (lastStatus && last) lastStatus.textContent = 'ON FILE';
 
-  // Wrap AI card with "coming soon" badge (must block pointer events + show tooltip)
-  var aiCard = document.querySelector('.cmd-card[data-action="ai"]');
-  if (aiCard) {
+  // Helper: wrap a .cmd-card with the "coming soon" blurred badge treatment
+  function _wrapComingSoon(card) {
+    if (!card) return;
     var wrapper = document.createElement('div');
     wrapper.className = 'cmd-card-wrapper';
-    aiCard.parentNode.insertBefore(wrapper, aiCard);
-    wrapper.appendChild(aiCard);
-    aiCard.classList.add('coming-soon');
+    card.parentNode.insertBefore(wrapper, card);
+    wrapper.appendChild(card);
+    card.classList.add('coming-soon');
     var badge = document.createElement('div');
     badge.className = 'coming-soon-badge';
     badge.textContent = 'COMING SOON';
     wrapper.appendChild(badge);
   }
+
+  _wrapComingSoon(document.querySelector('.cmd-card[data-action="ai"]'));
+  _wrapComingSoon(document.querySelector('.cmd-card[data-action="last"]'));
 
   // Auto-launch 2-player mode when arriving from the menu (?mode=2player)
   if (window.location.search.indexOf('mode=2player') !== -1) {

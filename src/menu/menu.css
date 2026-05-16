@@ -481,3 +481,28 @@
     padding: 1px 5px;
     border: 1px solid #6b4e2a;
   }
+
+  /* ── "Coming soon" treatment for play-panel cards ───────────── */
+  .cmd-card-p-wrapper {
+    position: relative;
+  }
+  .cmd-card-p.coming-soon-p {
+    filter: blur(2px) grayscale(0.5);
+    pointer-events: none;
+    cursor: default;
+  }
+  .coming-soon-badge-p {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Special Elite', monospace;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: var(--red);
+    background: rgba(247, 236, 208, 0.96);
+    padding: 5px 14px;
+    border: 2px solid var(--red);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 10;
+  }

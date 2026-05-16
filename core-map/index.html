@@ -321,7 +321,21 @@
       <div id="twp-end-text" style="font-family:'Special Elite',monospace;font-size:38px;letter-spacing:6px;color:var(--teal);text-shadow:0 0 20px rgba(111,211,214,0.6);">PLAYER 1 WINS</div>
       <div id="twp-end-sub" style="font-family:'VT323',monospace;font-size:16px;color:var(--paper);margin-top:10px;letter-spacing:2px;opacity:0.85;"></div>
       <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
-        <button onclick="document.getElementById('twp-end-overlay').style.display='none';" style="font-family:'Special Elite',monospace;font-size:13px;letter-spacing:2px;padding:10px 22px;border:1px solid var(--teal);color:var(--teal);background:rgba(111,211,214,0.08);cursor:pointer;">VIEW BOARD</button>
+        <a href="../src/menu/Strategy%20Game%20Menu.html" style="font-family:'Special Elite',monospace;font-size:13px;letter-spacing:2px;padding:10px 22px;border:1px solid var(--teal);color:var(--teal);background:rgba(111,211,214,0.08);cursor:pointer;text-decoration:none;">← GO BACK TO HQ</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Quick-start tutorial overlay ── -->
+  <div id="twp-tutorial" style="display:none;position:fixed;inset:0;z-index:200;">
+    <div id="twp-tutorial-backdrop"></div>
+    <div id="twp-tutorial-card">
+      <div id="twp-tutorial-kicker">FIELD ORIENTATION</div>
+      <div id="twp-tutorial-title"></div>
+      <div id="twp-tutorial-body"></div>
+      <div id="twp-tutorial-actions">
+        <button id="twp-tutorial-skip" onclick="window.TwoPlayerMode&&window.TwoPlayerMode.closeTutorial()">SKIP FOR NOW</button>
+        <button id="twp-tutorial-next" onclick="window.TwoPlayerMode&&window.TwoPlayerMode.nextTutorialStep()">NEXT ▸</button>
       </div>
     </div>
   </div>

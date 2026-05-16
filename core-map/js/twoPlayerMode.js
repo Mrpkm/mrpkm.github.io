@@ -11,6 +11,7 @@
   var _gridRows      = 12;
   var _gridCols      = 11;
   var _currentPlayer = 1;
+  var _conquered     = {};   // key → player (1 or 2)
   var _mode          = 'move';   // 'move' | 'attack' | 'rotate'
   var _selectedId    = null;
   var _log           = [];
@@ -23,9 +24,40 @@
   var _p2BriefCode   = null;     // separate P2 brief (dual-brief mode)
   var _panelWired    = false;
   var _flashTimeout  = null;
-  var _endOverlayShown = false;  // track if end-game overlay was shown once
+  var _endOverlayShown = false;
+  var _tutStep       = -1;
 
   var SHORT = { Infantry:'INF', Cavalry:'CAV', Tanks:'TNK', Motorized:'MOT', Artillery:'ART' };
+
+  /* ── Tutorial ────────────────────────────────────────────────── */
+  var TUT_STEPS = [
+    { title:'MOVE YOUR UNITS',   body:'Click a unit to select it. <strong>Teal squares</strong> show legal moves — click one to march. Each unit gets 2 actions per turn.', target:'twp-btn-move' },
+    { title:'ATTACK ENEMIES',    body:'Switch to <strong>Attack</strong> mode, then click a red-highlighted enemy. Direction matters — rear attacks deal more damage. They counter-strike!', target:'twp-btn-attack' },
+    { title:'END YOUR TURN',     body:'When your units have acted, press <strong>End Turn</strong>. The board rotates — each player always faces upward.', target:'twp-btn-end' },
+  ];
+  function _showTutorial() {
+    var overlay = document.getElementById('twp-tutorial');
+    if (!overlay) return;
+    _tutStep = 0; _renderTutorialStep(); overlay.style.display = '';
+  }
+  function _renderTutorialStep() {
+    var step = TUT_STEPS[_tutStep];
+    if (!step) { _closeTutorial(); return; }
+    var el = function(id){ return document.getElementById(id); };
+    if (el('twp-tutorial-kicker')) el('twp-tutorial-kicker').textContent = 'STEP '+(_tutStep+1)+' OF '+TUT_STEPS.length;
+    if (el('twp-tutorial-title'))  el('twp-tutorial-title').textContent  = step.title;
+    if (el('twp-tutorial-body'))   el('twp-tutorial-body').innerHTML     = step.body;
+    if (el('twp-tutorial-next'))   el('twp-tutorial-next').textContent   = _tutStep < TUT_STEPS.length-1 ? 'NEXT ▸' : 'GOT IT ✓';
+    document.querySelectorAll('.twp-tutorial-highlight').forEach(function(e){ e.classList.remove('twp-tutorial-highlight'); });
+    if (step.target) { var t = el(step.target); if (t) t.classList.add('twp-tutorial-highlight'); }
+  }
+  function _nextTutorialStep() { _tutStep++; if (_tutStep >= TUT_STEPS.length){ _closeTutorial(); return; } _renderTutorialStep(); }
+  function _closeTutorial() {
+    _tutStep = -1;
+    var overlay = document.getElementById('twp-tutorial');
+    if (overlay) overlay.style.display = 'none';
+    document.querySelectorAll('.twp-tutorial-highlight').forEach(function(e){ e.classList.remove('twp-tutorial-highlight'); });
+  }
   var STORAGE_BRIEF = 'twp_last_brief';
 
   /* ── Initial unit layout (12×11, 1-indexed) ─────────────── */
@@ -103,11 +135,13 @@
 
     document.querySelectorAll('#map-root .unit, #map-root .twp-unit').forEach(function (el) { el.remove(); });
     _unitEls = {};
+    _conquered = {};
 
     _applyZoneOverlays();
     _renderAllUnits();
     _showPanel();
     _renderDossier();
+    _showTutorial();
   }
 
   /* ── Red/Blue zone overlays ───────────────────────────────── */
@@ -381,6 +415,7 @@
     if (upd && upd.actionsRemaining <= 0) _selectedId = null;
     _checkWinner();
     _checkEndReached();
+    _applyConquest(unit.player, tr, tc);
     _renderAllUnits(); _renderDossier();
   }
 
@@ -469,6 +504,7 @@
 
     document.querySelectorAll('#map-root .twp-unit').forEach(function (el) { el.remove(); });
     _clearZoneOverlays();
+    _clearConquest();
     _unitEls = {};
 
     if (_p1BriefCode || _p2BriefCode) {
@@ -481,6 +517,28 @@
     }
 
     _renderAllUnits(); _renderDossier();
+  }
+
+  /* ── Conquest ────────────────────────────────────────────────── */
+  function _applyConquest(player, row, col) {
+    var midRow = Math.floor(_gridRows / 2);
+    // P1 (blue units) conquers tiles in the blue zone (top half, rows ≤ midRow)
+    // P2 (red  units) conquers tiles in the red  zone (bottom half, rows > midRow)
+    var isEnemyZone = (player === 1 && row <= midRow) || (player === 2 && row > midRow);
+    if (!isEnemyZone) return;
+    var k = row + ',' + col;
+    _conquered[k] = player;
+    var cellEl = window.MapRenderer.getCellEl(row, col);
+    if (cellEl) {
+      cellEl.classList.remove('twp-conquered-p1', 'twp-conquered-p2');
+      cellEl.classList.add('twp-conquered-p' + player);
+    }
+  }
+  function _clearConquest() {
+    _conquered = {};
+    document.querySelectorAll('#map-root .cell').forEach(function (el) {
+      el.classList.remove('twp-conquered-p1', 'twp-conquered-p2');
+    });
   }
 
   /* ── Helpers ─────────────────────────────────────────────────── */
@@ -817,14 +875,16 @@
 
   /* ── Expose ─────────────────────────────────────────────────── */
   window.TwoPlayerMode = {
-    isActive:          isActive,
-    start:             start,
-    startFromBriefing: startFromBriefing,
-    startWithBriefs:   startWithBriefs,
-    loadBrief:         loadBrief,
-    clearBrief:        clearBrief,
-    handleClick:       handleClick,
-    endTurn:           endTurn,
-    newGame:           newGame,
+    isActive:            isActive,
+    start:               start,
+    startFromBriefing:   startFromBriefing,
+    startWithBriefs:     startWithBriefs,
+    loadBrief:           loadBrief,
+    clearBrief:          clearBrief,
+    handleClick:         handleClick,
+    endTurn:             endTurn,
+    newGame:             newGame,
+    nextTutorialStep:    _nextTutorialStep,
+    closeTutorial:       _closeTutorial,
   };
 })();

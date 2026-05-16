@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HQ // Field Manual — Interactive</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+/* ── Design tokens (inlined from colors_and_type.css) ── */
+:root {
+  --hq-paper: #efe2c4; --hq-paper-light: #f7ecd0; --hq-paper-dark: #d9c79c;
+  --hq-paper-letter: #f3e7c8;
+  --hq-ink: #2a1f17; --hq-ink-dark: #1a1208; --hq-olive: #6b4e2a;
+  --hq-teal: #6fd3d6; --hq-red: #b22b2b;
+  --hq-success: #2f6d2f; --hq-warn: #8a6a2a;
+  --hq-rank-gold: #ffd34a;
+  --font-display: 'Special Elite', 'Courier New', monospace;
+  --font-body: 'Courier Prime', 'Courier New', monospace;
+  --font-terminal: 'VT323', 'Courier Prime', monospace;
+  --border-dashed: #8a6a3a;
+  --shadow-paper: 0 0 0 6px var(--hq-paper-dark), 0 0 0 8px var(--hq-ink), 0 30px 80px rgba(0,0,0,0.6);
+  --shadow-card-hover: 0 6px 12px rgba(0,0,0,0.25);
+  --glow-teal: 0 0 8px rgba(111,211,214,0.55);
+  --easing-snap: cubic-bezier(.2,.7,.2,1);
+}
+/* ── Rules styles (inlined from rules-styles.css) ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: var(--font-body); color: var(--hq-paper); user-select: none;
+  background:
+    radial-gradient(ellipse 600px 200px at 18% 22%, rgba(0,0,0,0.35), transparent 70%),
+    radial-gradient(ellipse 700px 220px at 82% 78%, rgba(0,0,0,0.30), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(255,210,150,0.025) 0 2px, rgba(0,0,0,0.06) 2px 6px, rgba(255,210,150,0.018) 6px 14px, rgba(0,0,0,0.05) 14px 22px),
+    linear-gradient(180deg, #3a2614 0%, #2a1d10 50%, #1d1208 100%);
+}
+body::before, body::after { content:""; position:fixed; pointer-events:none; width:380px; height:380px; opacity:0.45; z-index:0; mix-blend-mode:screen; }
+body::before { top:-90px; left:-90px; background:radial-gradient(circle at 50% 50%, rgba(111,211,214,0.10), transparent 65%); }
+body::after  { bottom:-90px; right:-90px; background:radial-gradient(circle at 50% 50%, rgba(178,43,43,0.10), transparent 65%); }
+
+.hud { position:fixed; top:14px; left:16px; z-index:60; color:var(--hq-teal); font-family:var(--font-terminal); font-size:18px; letter-spacing:2px; text-shadow:var(--glow-teal); pointer-events:none; line-height:1.15; }
+.blink { animation:blink 1.4s steps(2,end) infinite; }
+@keyframes blink { 50%{opacity:0;} }
+.hud .sub { font-size:13px; opacity:0.8; letter-spacing:3px; }
+.hud-back { position:fixed; top:14px; right:16px; z-index:60; color:var(--hq-teal); font-family:var(--font-display); font-size:12px; letter-spacing:2px; text-decoration:none; border:1px solid rgba(111,211,214,0.45); padding:4px 12px; background:rgba(111,211,214,0.06); transition:background .15s; }
+.hud-back:hover { background:rgba(111,211,214,0.18); }
+
+#hint { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:60; color:var(--hq-teal); background:rgba(10,8,4,0.78); border:1px solid var(--hq-teal); padding:6px 16px; font-family:var(--font-terminal); font-size:16px; letter-spacing:2px; box-shadow:0 0 14px rgba(111,211,214,0.35); pointer-events:none; max-width:80vw; text-align:center; }
+#stage { position:relative; z-index:1; height:100vh; width:100vw; display:grid; place-items:center; padding:56px 24px 44px; }
+.manual { position:relative; width:min(1340px,100%); height:100%; max-height:calc(100vh - 100px); display:grid; grid-template-columns:280px 1fr; gap:0; background: repeating-linear-gradient(0deg,rgba(120,90,40,0.05) 0 2px,transparent 2px 5px), radial-gradient(ellipse at 18% 18%, rgba(150,100,30,0.10),transparent 60%), radial-gradient(ellipse at 82% 88%, rgba(80,40,10,0.18),transparent 60%), var(--hq-paper); color:var(--hq-ink); border:2px solid var(--hq-ink); box-shadow:var(--shadow-paper); animation:panelIn .35s var(--easing-snap); }
+@keyframes panelIn { from{opacity:0;transform:translateY(10px) scale(0.985);}to{opacity:1;transform:none;} }
+
+.toc { display:flex; flex-direction:column; border-right:2px solid var(--hq-ink); background: repeating-linear-gradient(0deg,rgba(120,90,40,0.06) 0 2px,transparent 2px 5px), var(--hq-paper-light); overflow:auto; }
+.toc-head { padding:18px 18px 12px; border-bottom:2px solid var(--hq-ink); position:relative; }
+.toc-head .kicker { font-family:var(--font-terminal); font-size:14px; letter-spacing:2px; color:var(--hq-olive); }
+.toc-head h2 { font-family:var(--font-display); font-size:22px; letter-spacing:3px; text-transform:uppercase; margin-top:4px; color:var(--hq-ink); }
+.toc-head .stamp { position:absolute; top:14px; right:12px; font-family:var(--font-display); color:var(--hq-red); border:2px solid var(--hq-red); padding:2px 8px; transform:rotate(-4deg); font-size:11px; letter-spacing:2px; opacity:0.85; }
+.toc-progress { margin-top:14px; font-family:var(--font-terminal); font-size:13px; letter-spacing:1px; color:var(--hq-olive); display:flex; justify-content:space-between; align-items:center; }
+.toc-progress .nb { color:var(--hq-red); }
+.toc-progress .bar { flex:1; height:10px; margin-left:8px; background:var(--hq-paper); border:1px solid var(--hq-ink); position:relative; overflow:hidden; }
+.toc-progress .bar > i { position:absolute; inset:0; background:var(--hq-red); width:var(--p,0%); transition:width .25s ease; }
+.toc-list { list-style:none; padding:0; margin:0; }
+.toc-list li { display:grid; grid-template-columns:36px 1fr auto; align-items:center; gap:8px; padding:11px 14px; border-bottom:1px dashed var(--border-dashed); cursor:pointer; position:relative; transition:background .12s; }
+.toc-list li:hover { background:rgba(180,140,70,0.15); }
+.toc-list li.active { background:var(--hq-ink); color:var(--hq-paper); }
+.toc-list li.active .num, .toc-list li.active .arrow { color:var(--hq-teal); }
+.toc-list li.active .ttl { color:var(--hq-paper); }
+.toc-list .num { font-family:var(--font-terminal); font-size:20px; color:var(--hq-red); letter-spacing:1px; }
+.toc-list .ttl { font-family:var(--font-display); font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--hq-ink); line-height:1.15; }
+.toc-list .arrow { color:var(--hq-olive); font-family:var(--font-terminal); font-size:14px; }
+.toc-list li.done .num::after { content:"✓"; margin-left:4px; color:var(--hq-success); font-size:14px; }
+.toc-foot { margin-top:auto; padding:14px 16px; border-top:1px dashed var(--border-dashed); font-family:var(--font-terminal); font-size:12px; letter-spacing:1px; color:var(--hq-olive); }
+.toc-foot .nav-btns { display:flex; gap:6px; margin-top:8px; }
+.toc-foot button { flex:1; padding:6px 8px; background:var(--hq-paper); border:1px solid var(--hq-ink); font-family:var(--font-display); font-size:11px; letter-spacing:2px; cursor:pointer; color:var(--hq-ink); }
+.toc-foot button:hover { background:#fff5d6; }
+.toc-foot button:disabled { opacity:0.4; cursor:not-allowed; }
+.toc-foot button.primary { background:var(--hq-ink); color:var(--hq-paper); border-color:var(--hq-ink-dark); }
+.toc-foot button.primary:hover { background:#3a2c1f; }
+
+.doc-content { overflow-y:auto; padding:22px 32px 32px; color:var(--hq-ink); scroll-behavior:smooth; }
+.doc-content::-webkit-scrollbar { width:10px; }
+.doc-content::-webkit-scrollbar-track { background:var(--hq-paper-dark); }
+.doc-content::-webkit-scrollbar-thumb { background:var(--hq-olive); border:1px solid var(--hq-ink); }
+.doc-section { animation:secIn .3s ease; }
+@keyframes secIn { from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;} }
+.doc-head { display:flex; justify-content:space-between; align-items:flex-end; border-bottom:2px solid var(--hq-ink); padding-bottom:12px; margin-bottom:18px; }
+.doc-head .left { line-height:1.1; }
+.doc-head .kicker { font-family:var(--font-terminal); font-size:14px; color:var(--hq-olive); letter-spacing:2px; }
+.doc-head h1 { font-family:var(--font-display); font-size:30px; letter-spacing:3px; text-transform:uppercase; color:var(--hq-ink); margin-top:4px; }
+.doc-head .stamp { font-family:var(--font-display); color:var(--hq-red); border:2px solid var(--hq-red); padding:3px 10px; transform:rotate(-4deg); font-size:12px; letter-spacing:2px; opacity:0.85; }
+.doc-content p, .doc-content li { font-family:var(--font-body); font-size:14px; line-height:1.55; color:var(--hq-ink); }
+.doc-content p { margin-bottom:10px; }
+.doc-content strong { color:var(--hq-ink); font-weight:700; }
+.doc-content em { font-style:italic; color:var(--hq-olive); }
+.doc-content h3 { font-family:var(--font-display); font-size:14px; letter-spacing:2px; text-transform:uppercase; color:var(--hq-red); margin:18px 0 8px; padding-bottom:4px; border-bottom:1px dashed var(--border-dashed); }
+.meta { font-family:var(--font-terminal); font-size:16px; letter-spacing:1px; color:var(--hq-olive); margin-bottom:12px; }
+.callout { border:1px solid var(--hq-ink); background:var(--hq-paper-light); padding:10px 14px; font-family:var(--font-body); font-size:13px; margin:10px 0; position:relative; }
+.callout::before { content:"▸"; color:var(--hq-red); font-family:var(--font-terminal); margin-right:6px; }
+.callout.tip { border-color:var(--hq-red); }
+.callout.tip::before { content:"TIP //"; font-family:var(--font-display); letter-spacing:2px; font-size:12px; }
+.pillrow { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+.pill { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--hq-ink); background:var(--hq-paper-light); padding:3px 10px; font-family:var(--font-display); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--hq-ink); cursor:pointer; transition:background .12s; }
+.pill:hover { background:#fff5d6; }
+.pill.active { background:var(--hq-ink); color:var(--hq-paper); }
+.pill.red { color:var(--hq-red); border-color:var(--hq-red); }
+.pill.red.active { background:var(--hq-red); color:var(--hq-paper); border-color:var(--hq-red); }
+.kv { display:grid; grid-template-columns:max-content 1fr; gap:4px 14px; font-family:var(--font-body); font-size:13px; margin:8px 0; }
+.kv .k { color:var(--hq-olive); font-family:var(--font-display); letter-spacing:1px; text-transform:uppercase; font-size:11px; align-self:center; }
+.kv .v { font-family:var(--font-terminal); font-size:16px; color:var(--hq-red); letter-spacing:1px; }
+table.hq-tab { width:100%; border-collapse:collapse; font-family:var(--font-body); font-size:12px; margin:8px 0 12px; }
+table.hq-tab th, table.hq-tab td { border-bottom:1px dashed var(--border-dashed); padding:5px 8px; text-align:left; }
+table.hq-tab th { font-family:var(--font-display); letter-spacing:1px; text-transform:uppercase; font-size:11px; color:var(--hq-olive); border-bottom:1px solid var(--hq-ink); }
+table.hq-tab td.num { font-family:var(--font-terminal); color:var(--hq-red); font-size:16px; text-align:right; }
+
+/* miniboard */
+.miniboard-wrap { position:relative; margin:10px 0 8px; display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
+.miniboard { display:grid; border:1px solid var(--hq-ink); box-shadow:0 0 0 2px var(--hq-paper-dark),0 0 0 3px var(--hq-ink),inset 0 0 28px rgba(60,40,15,0.35); background:var(--hq-paper); position:relative; }
+.mbcell { position:relative; border:1px solid rgba(40,25,10,0.30); background-size:cover; background-repeat:no-repeat; filter:sepia(0.25) saturate(0.85) brightness(0.95); cursor:pointer; overflow:hidden; }
+.mbcell::after { content:""; position:absolute; inset:0; background:rgba(239,226,196,0.10); pointer-events:none; }
+.mbcell.legal { outline:1.5px solid var(--hq-teal); outline-offset:-2px; z-index:2; }
+.mbcell.legal::after { background:radial-gradient(circle,rgba(111,211,214,0.5),rgba(111,211,214,0.18) 60%,transparent 75%); }
+.mbcell.atkrange { outline:1.5px dashed var(--hq-red); outline-offset:-2px; z-index:2; }
+.mbcell.atkrange::after { background:rgba(178,43,43,0.18); }
+.mbcell.target::after { background:radial-gradient(circle,rgba(255,211,74,0.55),rgba(255,211,74,0.15) 60%,transparent 80%); }
+.mbcell.hovered::after { background:rgba(255,211,74,0.30); }
+.mb-unit { position:absolute; inset:3px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:4; pointer-events:auto; }
+.mb-unit img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55)) drop-shadow(0 0 2px rgba(255,255,255,0.25)); pointer-events:none; }
+.mb-unit[data-side="enemy"] img { filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55)) hue-rotate(-30deg) saturate(1.2); }
+.mb-unit.selected::before { content:""; position:absolute; inset:-3px; border:1.5px solid var(--hq-rank-gold); pointer-events:none; animation:pulse-ring 1.2s ease-in-out infinite; }
+@keyframes pulse-ring { 0%,100%{box-shadow:0 0 6px rgba(255,211,74,0.6)}50%{box-shadow:0 0 14px rgba(255,211,74,0.9)} }
+.mb-unit.bob   { animation:unit-bob 2.4s ease-in-out infinite; }
+.mb-unit.rumble{ animation:tank-rumble 3s ease-in-out infinite; }
+@keyframes unit-bob   { 0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)} }
+@keyframes tank-rumble{ 0%,100%{transform:translateX(0)}25%{transform:translateX(-0.5px)}75%{transform:translateX(0.5px)} }
+.mb-facing { position:absolute; z-index:5; font-family:var(--font-terminal); font-size:14px; color:var(--hq-teal); text-shadow:0 0 4px rgba(111,211,214,0.9); pointer-events:none; }
+.hq-flag { position:absolute; inset:4px; z-index:4; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:13px; color:var(--hq-paper); background:var(--hq-red); border:1px solid var(--hq-ink); letter-spacing:1px; box-shadow:0 1px 3px rgba(0,0,0,0.4); }
+.coach-hand { position:absolute; pointer-events:none; z-index:20; font-family:var(--font-display); color:var(--hq-teal); text-shadow:0 0 8px rgba(111,211,214,0.85); font-size:22px; letter-spacing:1px; animation:hand-bob 1.0s ease-in-out infinite; white-space:nowrap; }
+@keyframes hand-bob { 0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-5px)} }
+.coach-hand .label { display:inline-block; background:rgba(10,8,4,0.78); border:1px solid var(--hq-teal); padding:2px 8px; font-size:12px; letter-spacing:2px; margin-left:6px; vertical-align:middle; }
+.mb-aside { flex:1; min-width:240px; max-width:340px; font-family:var(--font-body); font-size:13px; }
+.mb-aside h4 { font-family:var(--font-display); font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--hq-red); padding-bottom:4px; border-bottom:1px dashed var(--border-dashed); margin:10px 0 6px; }
+.mb-aside h4:first-child { margin-top:0; }
+.mb-aside .hint { font-family:var(--font-terminal); color:var(--hq-olive); font-size:14px; letter-spacing:1px; margin:6px 0; }
+.combat-row { font-family:var(--font-terminal); font-size:16px; display:flex; justify-content:space-between; border-bottom:1px dashed var(--border-dashed); padding:3px 0; }
+.combat-row .v { color:var(--hq-red); }
+.combat-row.tot { border-bottom:2px solid var(--hq-ink); border-top:1px solid var(--hq-ink); padding:4px 0; }
+.combat-row.tot .v { font-size:22px; }
+.btn-replay { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:var(--hq-paper-light); border:1px solid var(--hq-ink); font-family:var(--font-display); font-size:11px; letter-spacing:2px; text-transform:uppercase; cursor:pointer; color:var(--hq-ink); }
+.btn-replay:hover { background:#fff5d6; }
+.btn-replay.primary { background:var(--hq-red); color:#fff; border-color:var(--hq-ink); }
+.btn-replay.primary:hover { background:#d03434; }
+.btn-replay:disabled { opacity:0.4; cursor:not-allowed; }
+
+.terrain-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:12px 0 10px; }
+.tcard { border:1px solid var(--hq-ink); background:var(--hq-paper-light); cursor:pointer; transition:transform .14s,box-shadow .14s,background .12s; position:relative; overflow:hidden; }
+.tcard:hover { transform:translateY(-2px); box-shadow:var(--shadow-card-hover); background:#fff5d6; }
+.tcard.active { outline:2px solid var(--hq-red); }
+.tcard .swatch { height:64px; width:100%; background-size:cover; background-position:center; filter:sepia(0.25) saturate(0.85); border-bottom:1px solid var(--hq-ink); }
+.tcard h5 { font-family:var(--font-display); font-size:12px; letter-spacing:1.5px; text-transform:uppercase; padding:6px 10px 0; }
+.tcard p { font-family:var(--font-body); font-size:11px; padding:2px 10px 8px; color:var(--hq-olive); }
+.terrain-detail { border:1px solid var(--hq-ink); background:var(--hq-paper); padding:12px 16px; margin:8px 0; }
+.terrain-detail .row { display:flex; justify-content:space-between; font-family:var(--font-body); font-size:13px; padding:4px 0; border-bottom:1px dashed var(--border-dashed); }
+.terrain-detail .row:last-child { border-bottom:none; }
+.terrain-detail .row .v { font-family:var(--font-terminal); color:var(--hq-red); font-size:16px; }
+.terrain-detail .row .v.neg { color:#8a2a2a; } .terrain-detail .row .v.pos { color:var(--hq-success); } .terrain-detail .row .v.bad { color:#6a3a1a; font-style:italic; }
+
+.rank-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:10px 0; }
+.rank-card { border:1px solid var(--hq-ink); background:var(--hq-paper-light); padding:12px; cursor:pointer; position:relative; transition:transform .14s,background .14s,box-shadow .14s; }
+.rank-card:hover { transform:translateY(-2px); background:#fff5d6; box-shadow:var(--shadow-card-hover); }
+.rank-card.active { outline:2px solid var(--hq-red); background:var(--hq-ink); color:var(--hq-paper); }
+.rank-card.active h5 { color:var(--hq-paper); } .rank-card.active .desc { color:#c8b896; }
+.rank-card .rank-img { width:56px; height:56px; image-rendering:pixelated; display:block; margin:0 auto 6px; background:var(--hq-paper); border:1px solid var(--hq-ink); padding:2px; }
+.rank-card h5 { font-family:var(--font-display); font-size:13px; letter-spacing:2px; text-transform:uppercase; text-align:center; }
+.rank-card .cost { font-family:var(--font-terminal); color:var(--hq-red); font-size:14px; text-align:center; margin:4px 0; letter-spacing:1px; }
+.rank-card .desc { font-family:var(--font-body); font-size:11px; line-height:1.45; color:var(--hq-olive); }
+
+.stat-tile { border:1px solid var(--hq-ink); background:var(--hq-paper-light); padding:8px 10px; text-align:center; font-family:var(--font-terminal); }
+.stat-tile .lab { font-family:var(--font-display); font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--hq-olive); }
+.stat-tile .val { font-size:24px; color:var(--hq-red); display:block; position:relative; }
+.stat-tile .delta { font-size:12px; color:var(--hq-success); margin-left:3px; } .stat-tile .delta.neg { color:#8a2a2a; }
+
+.doctrine-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:12px 0 10px; }
+.dcard { border:1px solid var(--hq-ink); background:var(--hq-paper-light); padding:14px 14px 12px; cursor:pointer; position:relative; transition:transform .14s,background .14s,box-shadow .14s; }
+.dcard:hover { transform:translateY(-2px); background:#fff5d6; box-shadow:var(--shadow-card-hover); }
+.dcard.active { outline:2px solid var(--hq-red); }
+.dcard .dimg { width:52px; height:52px; image-rendering:pixelated; background:var(--hq-paper); border:1px solid var(--hq-ink); padding:2px; display:block; margin-bottom:6px; }
+.dcard h5 { font-family:var(--font-display); font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+.dcard .alt { font-family:var(--font-body); font-size:11px; color:var(--hq-olive); font-style:italic; margin-bottom:6px; }
+.dcard .budget { font-family:var(--font-terminal); color:var(--hq-red); font-size:18px; letter-spacing:1px; margin-top:4px; }
+.doc-detail { border:1px solid var(--hq-ink); background:var(--hq-paper); padding:14px 16px; margin-top:6px; }
+.doc-detail .sig { display:flex; align-items:flex-start; gap:12px; padding-bottom:10px; margin-bottom:10px; border-bottom:1px dashed var(--border-dashed); }
+.doc-detail .sig img { width:44px; height:44px; image-rendering:pixelated; background:var(--hq-paper-light); border:1px solid var(--hq-ink); padding:2px; }
+.doc-detail .sig .stl { font-family:var(--font-display); font-size:12px; letter-spacing:2px; color:var(--hq-red); }
+.doc-detail .sig .sbd { font-family:var(--font-body); font-size:13px; color:var(--hq-ink); margin-top:2px; }
+.army-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-family:var(--font-body); font-size:13px; }
+.army-chip { display:inline-flex; align-items:center; gap:6px; background:var(--hq-paper-light); border:1px solid var(--hq-ink); padding:4px 8px; }
+.army-chip img { width:22px; height:22px; image-rendering:pixelated; }
+.army-chip .ct { font-family:var(--font-terminal); color:var(--hq-red); font-size:16px; margin-right:3px; }
+
+.wp-frame { border:1px solid var(--hq-ink); background:var(--hq-paper); padding:14px 16px; margin:10px 0; }
+.wp-head { display:flex; justify-content:space-between; align-items:baseline; border-bottom:1px dashed var(--border-dashed); padding-bottom:6px; margin-bottom:10px; }
+.wp-head .title { font-family:var(--font-display); font-size:13px; letter-spacing:2px; text-transform:uppercase; }
+.wp-head .big { font-family:var(--font-terminal); font-size:28px; color:var(--hq-red); letter-spacing:1px; }
+.wp-head .big .of { color:var(--hq-olive); font-size:16px; }
+.wp-bar-big { height:18px; background:var(--hq-paper-light); border:1px solid var(--hq-ink); position:relative; margin-bottom:10px; }
+.wp-bar-big > i { position:absolute; inset:0; width:var(--p,0%); background:linear-gradient(90deg,var(--hq-red),#8a6a2a); transition:width .25s ease; }
+.wp-bar-big.over > i { background:linear-gradient(90deg,#b22b2b,#ff5555); }
+.buy-row { display:grid; grid-template-columns:28px 1fr 70px auto 70px; gap:8px; align-items:center; padding:6px 0; border-bottom:1px dashed var(--border-dashed); font-family:var(--font-body); font-size:13px; }
+.buy-row .ico { width:28px; height:28px; image-rendering:pixelated; }
+.buy-row .nm { font-family:var(--font-display); font-size:12px; letter-spacing:1px; }
+.buy-row .cost { font-family:var(--font-terminal); color:var(--hq-red); font-size:14px; text-align:right; }
+.buy-row .ct { display:flex; align-items:center; justify-content:center; gap:6px; }
+.buy-row .ctnum { font-family:var(--font-terminal); font-size:20px; color:var(--hq-red); min-width:24px; text-align:center; }
+.buy-row .sub, .buy-row .add { width:26px; height:26px; background:var(--hq-paper-light); border:1px solid var(--hq-ink); font-family:var(--font-display); font-size:14px; cursor:pointer; color:var(--hq-ink); }
+.buy-row .sub:hover, .buy-row .add:hover { background:#fff5d6; }
+.buy-row .sub:disabled, .buy-row .add:disabled { opacity:0.35; cursor:not-allowed; }
+.buy-row .line { font-family:var(--font-terminal); color:var(--hq-red); font-size:14px; text-align:right; }
+
+.dossier-demo { display:grid; grid-template-columns:240px 1fr; gap:18px; align-items:flex-start; margin-top:10px; }
+.demo-doss { background:var(--hq-paper); border:2px solid var(--hq-ink); box-shadow:0 0 0 4px var(--hq-paper-dark),0 0 0 6px var(--hq-ink),0 14px 28px rgba(0,0,0,0.5); padding:14px 16px; font-family:var(--font-body); color:var(--hq-ink); }
+.demo-doss h3 { font-family:var(--font-display); font-size:14px; letter-spacing:3px; text-transform:uppercase; padding-bottom:6px; border-bottom:2px solid var(--hq-ink); color:var(--hq-ink); margin:0 0 8px; }
+.demo-doss h4 { font-family:var(--font-display); font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--hq-red); margin:10px 0 4px; padding-bottom:2px; border-bottom:1px dashed var(--border-dashed); }
+.demo-doss .doc-line { display:flex; align-items:center; gap:8px; font-size:12px; }
+.demo-doss .doc-line img { width:28px; height:28px; image-rendering:pixelated; }
+.demo-doss .wpline { font-family:var(--font-terminal); font-size:14px; color:var(--hq-olive); }
+.demo-doss .wpline .nb { color:var(--hq-red); }
+.demo-doss .invrow { display:flex; align-items:center; gap:8px; font-size:12px; padding:2px 0; }
+.demo-doss .invrow img { width:18px; height:18px; image-rendering:pixelated; }
+.demo-doss .invrow .ct { font-family:var(--font-terminal); color:var(--hq-red); margin-left:auto; font-size:14px; }
+.demo-doss .sel-mini { margin-top:8px; padding:8px 10px; background:var(--hq-paper-light); border:1px solid var(--hq-ink); }
+.demo-doss .sel-mini .selt { font-family:var(--font-display); font-size:12px; letter-spacing:1px; }
+.demo-doss .sel-mini .selrow { display:flex; justify-content:space-between; font-size:11px; }
+.demo-doss .sel-mini .selrow .k { color:var(--hq-olive); } .demo-doss .sel-mini .selrow .v { font-family:var(--font-terminal); color:var(--hq-red); }
+.callouts { list-style:none; padding:0; margin:0; font-family:var(--font-body); font-size:13px; }
+.callouts li { padding:6px 8px; border-left:3px solid var(--hq-red); background:var(--hq-paper-light); margin-bottom:6px; cursor:pointer; transition:background .12s; }
+.callouts li.active, .callouts li:hover { background:#fff5d6; }
+.callouts li .lbl { font-family:var(--font-display); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--hq-red); margin-right:6px; }
+.demo-doss .anno-target { outline:2px solid var(--hq-red); outline-offset:2px; animation:anno-pulse 1.0s ease-in-out infinite; }
+@keyframes anno-pulse { 0%,100%{outline-color:var(--hq-red);}50%{outline-color:rgba(178,43,43,0.4);} }
+
+.obj-grid { display:grid; grid-template-columns:auto auto auto; gap:10px; margin:8px 0; align-items:stretch; }
+.obj-card { border:1px solid var(--hq-ink); background:var(--hq-paper-light); padding:12px; font-family:var(--font-body); font-size:12px; text-align:center; }
+.obj-card .big { font-family:var(--font-terminal); font-size:26px; color:var(--hq-red); letter-spacing:1px; line-height:1; margin-bottom:4px; }
+.obj-card .lbl { font-family:var(--font-display); font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--hq-ink); margin-bottom:6px; }
+.obj-card.or { background:var(--hq-paper); display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:18px; letter-spacing:3px; color:var(--hq-olive); border:1px dashed var(--border-dashed); }
+.dice-pip { display:inline-block; width:28px; height:28px; border:1px solid var(--hq-ink); background:var(--hq-paper); font-family:var(--font-terminal); font-size:20px; color:var(--hq-red); text-align:center; line-height:28px; vertical-align:middle; box-shadow:0 1px 0 var(--hq-paper-dark); }
+.done-screen { text-align:center; padding:32px 12px; }
+.done-screen .big-stamp { display:inline-block; font-family:var(--font-display); color:var(--hq-red); border:4px solid var(--hq-red); padding:12px 22px; font-size:26px; letter-spacing:5px; transform:rotate(-4deg); opacity:0.9; margin-bottom:18px; }
+.done-screen h2 { font-family:var(--font-display); font-size:24px; letter-spacing:3px; text-transform:uppercase; color:var(--hq-ink); margin-bottom:8px; }
+.done-screen p { font-family:var(--font-body); font-size:14px; max-width:480px; margin:0 auto 14px; }
+</style>
+</head>
+<body data-screen-label="Field Manual — Interactive Rules">
+
+<div class="hud">
+  HQ // 06 JUN 1944 <span class="blink">_</span><br/>
+  <span class="sub">FIELD MANUAL · CADET BRIEFING</span>
+</div>
+<a class="hud-back" href="Strategy Game Menu.html">← BACK TO HQ</a>
+
+<div id="hint">▸ Read each section · complete the drill · advance</div>
+
+<div id="stage">
+  <div id="app"></div>
+</div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef } = React;
+
+/* ── Asset paths (relative to this file at src/menu/) ── */
+const TILE = {
+  P: 'assets/tiles/grass-plain.png',
+  F: 'assets/tiles/forest.png',
+  M: 'assets/tiles/mountains.png',
+  S: 'assets/tiles/swamp.png',
+};
+const SPRITE = {
+  infantry:  'assets/sprites/infantry.png',
+  cavalry:   'assets/sprites/cavalry.png',
+  tank:      'assets/sprites/tank.png',
+  motorized: 'assets/sprites/motorized.png',
+  artillery: 'assets/sprites/artillery.png',
+};
+const ICON = {
+  infantry:  'assets/icons/infantry.png',
+  cavalry:   'assets/icons/cavalry.png',
+  tank:      'assets/icons/tank.png',
+  motorized: 'assets/icons/motorized.png',
+  artillery: 'assets/icons/artillery.png',
+  plain:     'assets/icons/plain.png',
+  blitzkrieg:'assets/icons/blitzkrieg.png',
+  superior_firepower: 'assets/icons/superior_firepower.png',
+  rank_corporal:'assets/icons/rank_corporal.png',
+  rank_captain: 'assets/icons/rank_captain.png',
+  rank_colonel: 'assets/icons/rank_colonel.png',
+  war_point: 'assets/icons/war_point.png',
+  trench:    'assets/icons/trench.png',
+};
+
+function key(r,c){ return r+','+c; }
+function facingGlyph(f){ return {N:'▲',S:'▼',E:'▶',W:'◀'}[f]||'▲'; }
+function facingPos(f){ switch(f){ case 'N':return{top:-2,left:'50%',transform:'translateX(-50%)'}; case 'S':return{bottom:-2,left:'50%',transform:'translateX(-50%)'}; case 'E':return{right:-2,top:'50%',transform:'translateY(-50%)'}; case 'W':return{left:-2,top:'50%',transform:'translateY(-50%)'}; } }
+
+function MiniBoard({ rows, cols, terrain={}, units=[], hq=[], legal=new Set(), atkrange=new Set(), target=null, hoverKey=null, onCellClick, onUnitClick, onCellHover, coach=null, style={}, scale=52 }) {
+  const tileFor=(r,c)=>TILE[terrain[key(r,c)]||'P']||TILE.P;
+  const cells=[];
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const k=key(r,c);
+    const cls=['mbcell'];
+    if(legal.has(k))cls.push('legal');
+    if(atkrange.has(k))cls.push('atkrange');
+    if(target===k)cls.push('target');
+    if(hoverKey===k)cls.push('hovered');
+    const hqHere=hq.find(h=>h.r===r&&h.c===c);
+    cells.push(
+      <div key={k} className={cls.join(' ')} style={{backgroundImage:`url(${tileFor(r,c)})`,width:scale,height:scale}}
+        onClick={()=>onCellClick&&onCellClick(r,c)}
+        onMouseEnter={()=>onCellHover&&onCellHover(r,c)}
+        onMouseLeave={()=>onCellHover&&onCellHover(null,null)}>
+        {hqHere&&<div className="hq-flag">HQ-{hqHere.side==='enemy'?'X':'A'}</div>}
+      </div>
+    );
+  }
+  return (
+    <div className="miniboard" style={{gridTemplateRows:`repeat(${rows},${scale}px)`,gridTemplateColumns:`repeat(${cols},${scale}px)`,...style}}>
+      {cells}
+      {units.map(u=>{
+        const left=u.c*scale, top=u.r*scale;
+        const bobClass=u.type==='tank'?'rumble':'bob';
+        return (
+          <div key={u.id} className={`mb-unit ${bobClass} ${u.selected?'selected':''}`} data-type={u.type} data-side={u.side||'player'}
+            style={{position:'absolute',left,top,width:scale,height:scale}}
+            onClick={e=>{e.stopPropagation();onUnitClick&&onUnitClick(u);}}>
+            <img src={SPRITE[u.type]} alt={u.type} />
+            {u.facing&&<div className="mb-facing" style={facingPos(u.facing)}>{facingGlyph(u.facing)}</div>}
+          </div>
+        );
+      })}
+      {coach&&<div className="coach-hand" style={{left:coach.c*scale+scale/2,top:coach.r*scale-6}}>▼<span className="label">{coach.label}</span></div>}
+    </div>
+  );
+}
+
+/* ── Shared DrillFooter ── */
+function DrillFooter({label,canAdvance=true,onAdvance}){
+  return (
+    <div style={{marginTop:18,padding:'14px 16px',background:'var(--hq-paper-light)',border:'1px solid var(--hq-ink)',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12}}>
+      <div style={{fontFamily:'var(--font-terminal)',fontSize:15,letterSpacing:1,color:canAdvance?'var(--hq-success)':'var(--hq-olive)'}}>▸ {label}</div>
+      <button className="btn-replay primary" disabled={!canAdvance} style={{opacity:canAdvance?1:0.4,cursor:canAdvance?'pointer':'not-allowed'}} onClick={()=>canAdvance&&onAdvance()}>NEXT SECTION ▸</button>
+    </div>
+  );
+}
+
+/* ── Unit range helper ── */
+function unitRange(type){ return {infantry:{ortho:2,diag:1},cavalry:{ortho:2,diag:2},tank:{ortho:3,diag:0},motorized:{ortho:3,diag:2},artillery:{ortho:1,diag:1}}[type]||{ortho:1,diag:1}; }
+
+/* ── Section 01: Briefing ── */
+function SecBriefing({onAdvance}){
+  const rows=6,cols=9;
+  const hq=[{r:1,c:7,side:'enemy'}];
+  const reach=useMemo(()=>{
+    const s=new Set();
+    for(let r=-3;r<=3;r++) for(let c=-3;c<=3;c++){
+      if(r===0&&c===0)continue;
+      const nr=1+r,nc=7+c;
+      if(nr<0||nr>=rows||nc<0||nc>=cols)continue;
+      s.add(key(nr,nc));
+    }
+    return s;
+  },[]);
+  const [hover,setHover]=useState(null);
+  const [u,setU]=useState({r:4,c:2,side:'player',type:'infantry'});
+  const [moves,setMoves]=useState(0);
+  const inReach=reach.has(key(u.r,u.c));
+  return (
+    <div className="doc-section">
+      <div className="doc-head"><div className="left"><div className="kicker">// SECTION 01 · BRIEFING</div><h1>The Objective</h1></div><div className="stamp">CADET</div></div>
+      <p className="meta">// FROM: H.Q. WEST · TO: COMMANDER · 06 JUN 1944</p>
+      <p>Welcome to the desk, Commander. <strong>HQ</strong> is a chess-like tactical engagement on a square grid &mdash; light and fast, but each unit dies in two or three blows unless you protect it.</p>
+      <h3>How you win</h3>
+      <div className="obj-grid">
+        <div className="obj-card"><div className="big">5</div><div className="lbl">Turns Occupied</div><p>A unit stays inside the enemy HQ&apos;s <strong>3&ndash;square reach</strong> for five full turns.</p></div>
+        <div className="obj-card or">OR</div>
+        <div className="obj-card"><div className="big">20</div><div className="lbl">Damage Dealt</div><p>Cumulative damage to the enemy HQ reaches twenty. The structure falls.</p></div>
+      </div>
+      <div className="miniboard-wrap">
+        <MiniBoard rows={rows} cols={cols} hq={hq} units={[{id:'u',...u,selected:true}]} legal={reach} hoverKey={hover}
+          onCellClick={(r,c)=>{setU({...u,r,c});setMoves(m=>m+1);}}
+          onCellHover={(r,c)=>setHover(r===null?null:key(r,c))}
+          coach={moves===0?{r:4,c:2,label:'click any square'}:null} scale={46} />
+        <div className="mb-aside">
+          <h4>Hover &amp; click</h4>
+          <p className="hint">▸ Teal squares = within HQ reach.</p>
+          <p>{inReach?<><strong>Inside reach.</strong> Hold for 5 turns to win.</>:<><strong>Outside reach.</strong> Move closer.</>}</p>
+          <div className="kv"><span className="k">Range</span><span className="v">3 sq</span><span className="k">Hold</span><span className="v">5 turns</span><span className="k">OR Damage</span><span className="v">20 HP</span></div>
+        </div>
+      </div>
+      <div className="callout tip">If neither HQ has fallen by <strong>1000 turns</strong>, the side with more remaining HQ HP wins. Equal HP &mdash; draw.</div>
+      <DrillFooter label="Drill complete — you understand the objective." onAdvance={onAdvance} />
+    </div>
+  );
+}
+
+/* ── Section 02: Move ── */
+function SecMove({onAdvance}){
+  const rows=6,cols=9;
+  const terrain=useMemo(()=>({[key(2,3)]:'F',[key(2,4)]:'F',[key(3,5)]:'M',[key(4,2)]:'S',[key(4,3)]:'S'}),[]);
+  const [unit,setUnit]=useState({id:'p1',r:3,c:2,type:'infantry',side:'player',selected:false});
+  const [done,setDone]=useState(false);
+  const [unitType,setUnitType]=useState('infantry');
+  const legal=useMemo(()=>{
+    if(!unit.selected)return new Set();
+    const s=new Set();
+    const ranges=unitRange(unit.type);
+    for(let dr=-ranges.ortho;dr<=ranges.ortho;dr++) for(let dc=-ranges.ortho;dc<=ranges.ortho;dc++){
+      if(dr===0&&dc===0)continue;
+      const isDiag=dr!==0&&dc!==0;
+      const isOrtho=dr===0||dc===0;
+      const dist=Math.max(Math.abs(dr),Math.abs(dc));
+      function tryAdd(dr2,dc2){const nr=unit.r+dr2,nc=unit.c+dc2;if(nr<0||nr>=rows||nc<0||nc>=cols)return;const t=terrain[key(nr,nc)]||'P';if(unit.type==='tank'&&(t==='F'||t==='M'))return;s.add(key(nr,nc));}
+      if(isOrtho&&dist<=ranges.ortho)tryAdd(dr,dc);
+      else if(isDiag&&dist<=ranges.diag)tryAdd(dr,dc);
+    }
+    return s;
+  },[unit,terrain]);
+  function selectUnit(u){setUnit({...u,selected:!u.selected});}
+  function clickCell(r,c){if(!unit.selected||!legal.has(key(r,c)))return;setUnit({...unit,r,c,selected:false});setDone(true);}
+  function reset(){setUnit({id:'p1',r:3,c:2,type:'infantry',side:'player',selected:false});setDone(false);}
+  function changeType(t){setUnitType(t);setUnit({...unit,type:t,selected:false});setDone(false);}
+  return (
+    <div className="doc-section">
+      <div className="doc-head"><div className="left"><div className="kicker">// SECTION 02 · MOVEMENT</div><h1>Move a Unit</h1></div><div className="stamp">DRILL · M-1</div></div>
+      <p>Movement is <strong>jump-based</strong>. Select any square inside your footprint &mdash; intermediate tiles don&apos;t block. Each unit may <strong>move or attack twice per turn</strong>, freely split.</p>
+      <div className="miniboard-wrap">
+        <MiniBoard rows={rows} cols={cols} terrain={terrain} units={[unit]} legal={legal}
+          onUnitClick={selectUnit} onCellClick={clickCell}
+          coach={!unit.selected&&!done?{r:unit.r,c:unit.c,label:'click me'}:null} scale={46} />
+        <div className="mb-aside">
+          <h4>Unit class</h4>
+          <div className="pillrow">{['infantry','cavalry','tank','motorized'].map(t=><button key={t} className={`pill ${unitType===t?'active':''}`} onClick={()=>changeType(t)}>{t}</button>)}</div>
+          <h4>Footprint</h4>
+          <div className="kv"><span className="k">Ortho mv</span><span className="v">{unitRange(unitType).ortho} sq</span><span className="k">Diag mv</span><span className="v">{unitRange(unitType).diag} sq</span></div>
+          {done&&<div className="callout tip" style={{marginTop:12}}>Order accepted. <button className="btn-replay" style={{marginLeft:8}} onClick={reset}>↺ Replay</button></div>}
+        </div>
+      </div>
+      <DrillFooter label={done?'Drill complete.':'Move the unit once to advance.'} canAdvance={done} onAdvance={onAdvance} />
+    </div>
+  );
+}
+
+/* ── Section 03: Combat ── */
+function combatStats(atkType,defType){
+  const s={infantry:{hp:4,str:1,def:0},cavalry:{hp:3,str:0.5,def:1},tank:{hp:8,str:3,def:3},motorized:{hp:6,str:2,def:1},artillery:{hp:2,str:3,def:0.5}};
+  return{atkStr:s[atkType].str,defDef:s[defType].def};
+}
+function SecCombat({onAdvance}){
+  const rows=5,cols=7;
+  const [attacker,setAttacker]=useState({r:2,c:1,type:'infantry',side:'player',facing:'E'});
+  const [defender,setDefender]=useState({r:2,c:4,type:'infantry',side:'enemy',facing:'W'});
+  const [done,setDone]=useState(false);
+  const [outcome,setOutcome]=useState(null);
+  const reach=useMemo(()=>{
+    const s=new Set();
+    const atk=attacker.type==='tank'?{ortho:4}:attacker.type==='artillery'?{ortho:6}:attacker.type==='cavalry'?{ortho:2}:attacker.type==='motorized'?{ortho:3}:{ortho:1};
+    for(let dr=-atk.ortho;dr<=atk.ortho;dr++) for(let dc=-atk.ortho;dc<=atk.ortho;dc++){
+      if(dr===0&&dc===0)continue;
+      const nr=attacker.r+dr,nc=attacker.c+dc;
+      if(nr<0||nr>=rows||nc<0||nc>=cols)continue;
+      if(Math.max(Math.abs(dr),Math.abs(dc))<=atk.ortho)s.add(key(nr,nc));
+    }
+    return s;
+  },[attacker]);
+  const direction=useMemo(()=>{
+    let dr=attacker.r-defender.r,dc=attacker.c-defender.c;
+    let fr=dr,fc=dc;
+    if(defender.facing==='E'){[fr,fc]=[-dc,dr];}
+    if(defender.facing==='S'){[fr,fc]=[-dr,-dc];}
+    if(defender.facing==='W'){[fr,fc]=[dc,-dr];}
+    if(fr<0)return'frontal'; if(fr>0)return'rear'; return'side';
+  },[attacker,defender]);
+  const inReach=reach.has(key(defender.r,defender.c));
+  const bs=useMemo(()=>combatStats(attacker.type,defender.type),[attacker.type,defender.type]);
+  const dirMod={frontal:{str:0,def:0},side:{str:0.5,def:-0.5},rear:{str:1,def:-1}}[direction];
+  const estimate=useMemo(()=>Math.max(1,Math.round((3.5+bs.atkStr+dirMod.str-bs.defDef-dirMod.def)*10)/10),[bs,dirMod]);
+  function rotateDef(){const order=['N','E','S','W'];setDefender({...defender,facing:order[(order.indexOf(defender.facing)+1)%4]});}
+  function resolve(){const roll=Math.floor(Math.random()*6)+1;setOutcome({roll,dmg:Math.max(1,Math.round((roll+bs.atkStr+dirMod.str-bs.defDef-dirMod.def)*10)/10)});setDone(true);}
+  function reset(){setOutcome(null);setDone(false);setAttacker({r:2,c:1,type:'infantry',side:'player',facing:'E'});setDefender({r:2,c:4,type:'infantry',side:'enemy',facing:'W'});}
+  return (
+    <div className="doc-section">
+      <div className="doc-head"><div className="left"><div className="kicker">// SECTION 03 · COMBAT</div><h1>Attack &amp; Odds</h1></div><div className="stamp">DRILL · C-1</div></div>
+      <p>Damage rolls <code>1d6</code> + attacker strength + bonuses, minus defender defense. <strong>Final damage floored at 1.</strong></p>
+      <div className="miniboard-wrap">
+        <MiniBoard rows={rows} cols={cols} units={[{id:'a',...attacker,selected:true},{id:'d',...defender,selected:false}]} atkrange={reach} target={inReach?key(defender.r,defender.c):null} scale={50} />
+        <div className="mb-aside">
+          <h4>Direction vs. defender</h4>
+          <div className="pillrow">{['frontal','side','rear'].map(d=><span key={d} className={`pill ${direction===d?'red active':''}`}>{d}</span>)}</div>
+          <p className="hint">▸ Defender faces <strong>{defender.facing}</strong>.</p>
+          <button className="btn-replay" onClick={rotateDef}>↻ Rotate defender</button>
+          <h4>Forecast</h4>
+          <div className="combat-row"><span>BASE ROLL</span><span className="v">~3.5</span></div>
+          <div className="combat-row"><span>ATK STR</span><span className="v">+{bs.atkStr}</span></div>
+          <div className="combat-row"><span>DIR ({direction.slice(0,4)})</span><span className="v">{(dirMod.str>=0?'+':'')+dirMod.str} / {(dirMod.def>=0?'+':'')+dirMod.def}</span></div>
+          <div className="combat-row"><span>DEF</span><span className="v">&minus;{bs.defDef}</span></div>
+          <div className="combat-row tot"><span>EST. DMG</span><span className="v">{estimate}</span></div>
+          <h4>Resolve</h4>
+          {!outcome?<button className="btn-replay primary" onClick={resolve}>▸ Roll D6 &amp; resolve</button>
+            :<div><div className="combat-row"><span>D6 ROLL</span><span className="v"><span className="dice-pip">{outcome.roll}</span></span></div><div className="combat-row tot"><span>DAMAGE DEALT</span><span className="v">{outcome.dmg}</span></div><button className="btn-replay" onClick={reset} style={{marginTop:8}}>↺ Replay</button></div>
+          }
+        </div>
+      </div>
+      <table className="hq-tab"><tbody><tr><th>Direction</th><th>Str</th><th>Def</th><th>Net</th></tr><tr><td>Frontal</td><td>+0</td><td>+0</td><td className="num">+0</td></tr><tr><td>Side</td><td>+0.5</td><td>&minus;0.5</td><td className="num">+1</td></tr><tr><td>Rear</td><td>+1</td><td>&minus;1</td><td className="num">+2</td></tr><tr><td>Encirclement</td><td>+3</td><td>&minus;2</td><td className="num">+5</td></tr></tbody></table>
+      <DrillFooter label={done?'Engagement logged.':'Resolve one engagement to advance.'} canAdvance={done} onAdvance={onAdvance} />
+    </div>
+  );
+}
+
+/* ── Section 04: Terrain ── */
+function SecTerrain({onAdvance}){
+  const TERRAIN=[
+    {id:'P',name:'Grasslands',img:'assets/tiles/grass-plain.png',summary:'Open ground. No modifiers.',mods:[{k:'INF/CAV',v:'normal',tone:''},{k:'TANK/MOT.',v:'normal',tone:''},{k:'ARTILLERY',v:'normal',tone:''},{k:'TRENCH?',v:'Inf+Cav',tone:'pos'}]},
+    {id:'S',name:'Swamp',img:'assets/tiles/swamp.png',summary:'Mud. Slow but defendable.',mods:[{k:'INF/CAV',v:'−1 mv · +1 def',tone:'pos'},{k:'TANK/MOT.',v:'+0.5 def',tone:'pos'},{k:'ARTILLERY',v:'−1 mv · 1 sq',tone:'neg'},{k:'TRENCH?',v:'NO',tone:'bad'}]},
+    {id:'F',name:'Forest',img:'assets/tiles/forest.png',summary:'Cover. Heavy units blocked.',mods:[{k:'INF/CAV',v:'−1 mv · +1.5 def',tone:'pos'},{k:'TANK/MOT.',v:'−1 mv · +1.5 def',tone:'pos'},{k:'ARTILLERY',v:'cannot enter',tone:'bad'},{k:'TRENCH?',v:'Inf+Cav',tone:'pos'}]},
+    {id:'M',name:'Mountains',img:'assets/tiles/mountains.png',summary:'High ground. Foot-only.',mods:[{k:'INF/CAV',v:'+2 def',tone:'pos'},{k:'TANK/MOT.',v:'cannot enter',tone:'bad'},{k:'ARTILLERY',v:'cannot enter',tone:'bad'},{k:'TRENCH?',v:'Inf+Cav',tone:'pos'}]},
+  ];
+  const [sel,setSel]=useState('S');
+  const [touched,setTouched]=useState(new Set(['S']));
+  const cur=TERRAIN.find(t=>t.id===sel);
+  function pick(id){setSel(id);const n=new Set(touched);n.add(id);setTouched(n);}
+  return (
+    <div className="doc-section">
+      <div className="doc-head"><div className="left"><div className="kicker">// SECTION 04 · TERRAIN</div><h1>Read the Ground</h1></div><div className="stamp">FIELD</div></div>
+      <p>Four biomes. Each shifts movement and defense. <em>Click a tile.</em></p>
+      <div className="terrain-grid">{TERRAIN.map(t=><div key={t.id} className={`tcard ${sel===t.id?'active':''}`} onClick={()=>pick(t.id)}><div className="swatch" style={{backgroundImage:`url(${t.img})`}}></div><h5>{t.name}</h5><p>{t.summary}</p></div>)}</div>
+      <div className="terrain-detail">{cur.mods.map(m=><div key={m.k} className="row"><span>{m.k}</span><span className={`v ${m.tone}`}>{m.v}</span></div>)}</div>
+      <div className="callout tip">Attacking <strong>from mountains</strong> costs <strong>&minus;1 strength</strong> for any unit.</div>
+      <DrillFooter label={touched.size>=4?'You\'ve scouted every biome.':`Click each biome (${touched.size}/4).`} canAdvance={touched.size>=4} onAdvance={onAdvance} />
+    </div>
+  );
+}
+
+/* ── Section 05: Ranks ── */
+function StatTile({lab,val,base,text}){const delta=!text?val-base:null;return(<div className="stat-tile"><div className="lab">{lab}</div><div className="val">{val}{!text&&delta>0&&<span className="delta">+{delta}</span>}{!text&&delta<0&&<span className="delta neg">{delta}</span>}</div></div>);}
+function rankStats(type,level){
+  const base={infantry:{hp:4,str:1,def:0,note:'2/1 mv · r1'},cavalry:{hp:3,str:0.5,def:1,note:'2/2 mv · r2'},tank:{hp:8,str:3,def:3,note:'3/0 mv · r4/3'},artillery:{hp:2,str:3,def:0.5,note:'1/1 mv · r6'}}[type];
+  const out={...base};
+  if(level===0)return out;
+  if(type==='infantry'){if(level>=1){out.str+=1;out.def+=1;}if(level>=2){out.hp+=1;out.def+=1;}if(level>=3){out.str+=1;out.def+=1;}}
+  else if(type==='cavalry'){if(level>=1){out.str+=1;out.def+=1;}if(level>=2){out.def+=1;out.note='4/4 mv · r2';}if(level>=3){out.str+=1;out.def+=1;}}
+  else if(type==='tank'){if(level>=1){out.note='+1 ortho (still-cost)';}if(level>=2){out.note='+1 atk stamina (rest)';}if(level>=3){out.def+=2;out.note='rest 1 → +2 def';}}
+  else if(type==='artillery'){if(level>=1){out.note='+1 reach';}if(level>=2){out.str+=2;out.note='+2 str ≤5 sq';}if(level>=3){out.note='+1 ortho mv';}}
+  return out;
+}
+function SecRanks({onAdvance}){
+  const RANKS=[{id:0,name:'Recruit',img:null,cost:0,desc:'Base stats.'},{id:1,name:'Corporal',img:ICON.rank_corporal,cost:2,desc:'L1 — first kill against a stronger foe.'},{id:2,name:'Captain',img:ICON.rank_captain,cost:4,desc:'L2 — bigger stat jump.'},{id:3,name:'Colonel',img:ICON.rank_colonel,cost:5,desc:'L3 — top of the ladder.'}];
+  const [unitType,setUnitType]=useState('infantry');
+  const [level,setLevel]=useState(0);
+  const [touched,setTouched]=useState(new Set([0]));
+  function pick(id){setLevel(id);const n=new Set(touched);n.add(id);setTouched(n);}
+  const stats=useMemo(()=>rankStats(unitType,level),[unitType,level]);
+  const base=rankStats(unitType,0);
+  return (
+    <div className="doc-section">
+      <div className="doc-head"><div className="left"><div className="kicker">// SECTION 05 · RANKS</div><h1>Promotion &amp; XP</h1></div><div className="stamp">SERVICE</div></div>
+      <p>Units earn XP by defeating <strong>stronger</strong> opponents. Three rungs: <strong>Corporal · Captain · Colonel</strong>. Also buyable with War Points pre-game.</p>
+      <div className="pillrow">{['infantry','cavalry','tank','artillery'].map(t=><button key={t} className={`pill ${unitType===t?'active':''}`} onClick={()=>{setUnitType(t);setLevel(0);}}>{t}</button>)}</div>
+      <div className="rank-grid">{RANKS.map(r=><div key={r.id} className={`rank-card ${level===r.id?'active':''}`} onClick={()=>pick(r.id)}>{r.img?<img className="rank-img" src={r.img} alt={r.name} />:<div className="rank-img" style={{display:'grid',placeItems:'center',fontFamily:'var(--font-display)',fontSize:24}}>—</div>}<h5>{r.name}</h5><div className="cost">{r.cost>0?`+${r.cost} WP`:'BASE'}</div><div className="desc">{r.desc}</div></div>)}</div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:8,marginTop:6}}>
+        <StatTile lab="HP" val={stats.hp} base={base.hp} />
+        <StatTile lab="Strength" val={stats.str} base={base.str} />
+        <StatTile lab="Defense" val={stats.def} base={base.def} />
+        <StatTile lab="Move/Reach" val={stats.note} base={base.note} text />
+      </div>
+      <DrillFooter label={touched.size>=4?'You\'ve walked the promotion ladder.':`Click each rank (${touched.size}/4).`} canAdvance={touched.size>=4} onAdvance={onAdvance} />
+    </div>
+  );
+}
+
+/* ── Section 06: Doctrines ── */
+function DoctrineCaps({id}){
+  const rows={plain:['5','5','5','5'],blitzkrieg:['0','4','2','2'],superior_firepower:['2','2','2','2']}[id];
+  return(<table className="hq-tab" style={{marginTop:4}}><tbody><tr><th>Heavy</th><th>Inf</th><th>Cav</th><th>Special</th></tr><tr>{rows.map((v,i)=><td key={i} className="num">{v}</td>)}</tr></tbody></table>);
+}
+function SecDoctrines({onAdvance}){
+  const DOCS=[
+    {id:'plain',name:'Plain',alt:'Vanilla doctrine',icon:ICON.plain,budget:30,army:'compose 14 (≤5/class)',free:[],sigT:'No signature rule',sigB:'Tanks: 2 ortho / 0 diag. Compose your own 14-unit starting army. The neutral baseline.'},
+    {id:'blitzkrieg',name:'Blitzkrieg',alt:'"Tanks must keep moving"',icon:ICON.blitzkrieg,budget:25,army:'fixed',free:[['tank',6],['motorized',4],['infantry',4]],sigT:'Stay in motion or pay',sigB:'Tanks: 4 ortho / 0 diag. Each still turn = −1 cumulative def (resets on movement).'},
+    {id:'superior_firepower',name:'Superior FP',alt:'"Long-range overwhelm"',icon:ICON.superior_firepower,budget:35,army:'fixed',free:[['artillery',6],['cavalry',4],['infantry',4]],sigT:'Reach out and touch',sigB:'Artillery range: 12 sq with −0.5 str falloff past sq. 8. Tanks (if bought): 2 ortho / 1 diag.'},
+  ];
+  const [sel,setSel]=useState('plain');
+  const [touched,setTouched]=useState(new Set(['plain']));
+  const cur=DOCS.find(d=>d.id===sel);
+  function pick(id){setSel(id);const n=new Set(touched);n.add(id);setTouched(n);}
+  return (
+    <div className="doc-section">
+      <div className="doc-head"><div className="left"><div className="kicker">// SECTION 06 · DOCTRINES</div><h1>Pick a Doctrine</h1></div><div className="stamp">PLAYBOOK</div></div>
+      <p>A doctrine is a <strong>complete package</strong>: budget, free army, signature combat rule. Both sides pick from the same pool.</p>
+      <div className="doctrine-grid">{DOCS.map(d=><div key={d.id} className={`dcard ${sel===d.id?'active':''}`} onClick={()=>pick(d.id)}><img className="dimg" src={d.icon} alt={d.name} /><h5>{d.name}</h5><div className="alt">{d.alt}</div><div className="budget">{d.budget} WP</div></div>)}</div>
+      <div className="doc-detail">
+        <div className="sig"><img src={cur.icon} alt={cur.name} /><div><div className="stl">SIGNATURE — {cur.sigT}</div><div className="sbd">{cur.sigB}</div></div></div>
+        <h3>Free Army</h3>
+        {cur.free.length>0?<div className="army-row">{cur.free.map(([k,n])=><div key={k} className="army-chip"><img src={ICON[k]} alt={k} /><span className="ct">{n}</span><span>{k}</span></div>)}</div>:<p><em>{cur.army}</em></p>}
+        <h3>Buy caps</h3><DoctrineCaps id={cur.id} />
+      </div>
+      <DrillFooter label={touched.size>=3?'You\'ve studied all three doctrines.':`Inspect each doctrine (${touched.size}/3).`} canAdvance={touched.size>=3} onAdvance={onAdvance} />
+    </div>
+  );
+}
+
+/* ── Section 07: War Points ── */
+function SecWarPoints({onAdvance}){
+  const BUDGETS={plain:30,blitzkrieg:25,superior_firepower:35};
+  const COST={infantry:3,cavalry:3,tank:5,motorized:5,artillery:5};
+  const CAPS={plain:{tank:5,motorized:5,infantry:5,cavalry:5,artillery:5},blitzkrieg:{tank:0,motorized:0,infantry:4,cavalry:2,artillery:2},superior_firepower:{tank:2,motorized:2,infantry:2,cavalry:2,artillery:2}};
+  const [doc,setDoc]=useState('blitzkrieg');
+  const budget=BUDGETS[doc];
+  const [bought,setBought]=useState({infantry:0,cavalry:0,tank:0,motorized:0,artillery:0});
+  const [spent,setSpent]=useState(false);
+  useEffect(()=>{setBought({infantry:0,cavalry:0,tank:0,motorized:0,artillery:0});setSpent(false);},[doc]);
+  const total=Object.entries(bought).reduce((s,[k,n])=>s+n*COST[k],0);
+  const left=budget-total;
+  const over=total>budget;
+  function inc(k){if(bought[k]>=CAPS[doc][k]||total+COST[k]>budget)return;setBought({...bought,[k]:bought[k]+1});setSpent(true);}
+  function dec(k){if(bought[k]<=0)return;setBought({...bought,[k]:bought[k]-1});}
+  return (
+    <div className="doc-section">
+      <div className="doc-head"><div className="left"><div className="kicker">// SECTION 07 · ECONOMY</div><h1>War Points</h1></div><div className="stamp">QUARTERMASTER</div></div>
+      <p>The economy is <strong>pre-game only</strong>. Your doctrine grants a budget; you spend it once on extra units, XP, or spawn bonuses. <strong>Leftover points forfeit.</strong></p>
+      <div className="pillrow">{['plain','blitzkrieg','superior_firepower'].map(d=><button key={d} className={`pill ${doc===d?'red active':''}`} onClick={()=>setDoc(d)}>{d.replace('_',' ')} · {BUDGETS[d]} WP</button>)}</div>
+      <div className="wp-frame">
+        <div className="wp-head"><div><div className="title">War Points</div><div style={{fontFamily:'var(--font-terminal)',color:'var(--hq-olive)',fontSize:14,letterSpacing:1}}>spent: <span style={{color:'var(--hq-red)'}}>{total}</span> · cap: {budget}</div></div><div className="big">{left}<span className="of"> / {budget}</span></div></div>
+        <div className={`wp-bar-big ${over?'over':''}`} style={{'--p':Math.min(100,total/budget*100)+'%'}}><i></i></div>
+        {['infantry','cavalry','tank','motorized','artillery'].map(k=>(
+          <div className="buy-row" key={k}>
+            <img className="ico" src={ICON[k]} alt={k} />
+            <div className="nm">{k}</div>
+            <div className="cost">{COST[k]} WP</div>
+            <div className="ct"><button className="sub" onClick={()=>dec(k)} disabled={bought[k]===0}>−</button><span className="ctnum">{bought[k]}</span><button className="add" onClick={()=>inc(k)} disabled={bought[k]>=CAPS[doc][k]||total+COST[k]>budget}>+</button></div>
+            <div className="line">cap {CAPS[doc][k]} · {bought[k]*COST[k]} WP</div>
+          </div>
+        ))}
+      </div>
+      <DrillFooter label={spent?'You\'ve spent your first War Points.':'Buy at least one unit to advance.'} canAdvance={spent} onAdvance={onAdvance} />
+    </div>
+  );
+}
+
+/* ── Section 08: Dossier ── */
+function SecDossier({onAdvance}){
+  const [hl,setHl]=useState('doctrine');
+  const [touched,setTouched]=useState(new Set(['doctrine']));
+  function pick(id){setHl(id);const n=new Set(touched);n.add(id);setTouched(n);}
+  return (
+    <div className="doc-section">
+      <div className="doc-head"><div className="left"><div className="kicker">// SECTION 08 · INTERFACE</div><h1>Read the Dossier</h1></div><div className="stamp">HUD</div></div>
+      <p>The <strong>Briefing Dossier</strong> rides the right edge of every engagement. Four panels &mdash; click each callout to highlight it.</p>
+      <div className="dossier-demo">
+        <div className="demo-doss">
+          <h3>Briefing Dossier</h3>
+          <h4 className={hl==='doctrine'?'anno-target':''}>Doctrine</h4>
+          <div className={`doc-line ${hl==='doctrine'?'anno-target':''}`}><img src={ICON.blitzkrieg} alt="" /><span style={{fontFamily:'var(--font-display)',letterSpacing:1}}>BLITZKRIEG</span></div>
+          <h4 className={hl==='wp'?'anno-target':''}>War Points</h4>
+          <div className={`wpline ${hl==='wp'?'anno-target':''}`}><span className="nb">12</span> / 25 spent · 13 left</div>
+          <h4 className={hl==='ob'?'anno-target':''}>Order of Battle</h4>
+          <div className={hl==='ob'?'anno-target':''}>
+            <div className="invrow"><img src={ICON.tank} alt="" /><span>Tank</span><span className="ct">×6</span></div>
+            <div className="invrow"><img src={ICON.motorized} alt="" /><span>Motorized</span><span className="ct">×4</span></div>
+          </div>
+          <h4 className={hl==='sel'?'anno-target':''}>Selection</h4>
+          <div className={`sel-mini ${hl==='sel'?'anno-target':''}`}><div className="selt">TANK · CORPORAL · facing E</div><div className="selrow"><span className="k">HP</span><span className="v">8/8</span></div><div className="selrow"><span className="k">STR/DEF</span><span className="v">3/3</span></div></div>
+        </div>
+        <ul className="callouts">
+          <li className={hl==='doctrine'?'active':''} onClick={()=>pick('doctrine')}><span className="lbl">A · Doctrine</span>Active playbook. Sets army, budget, signature rule. Locked at game start.</li>
+          <li className={hl==='wp'?'active':''} onClick={()=>pick('wp')}><span className="lbl">B · War Points</span>Pre-game spend tracker. Closed once the engagement starts.</li>
+          <li className={hl==='ob'?'active':''} onClick={()=>pick('ob')}><span className="lbl">C · Order of Battle</span>Live unit count by class. Watch numbers drop.</li>
+          <li className={hl==='sel'?'active':''} onClick={()=>pick('sel')}><span className="lbl">D · Selection</span>Stats for the currently-clicked unit: rank, HP, STR/DEF, facing, trench tier.</li>
+        </ul>
+      </div>
+      <DrillFooter label={touched.size>=4?'You can read every panel.':`Click each callout (${touched.size}/4).`} canAdvance={touched.size>=4} onAdvance={onAdvance} />
+    </div>
+  );
+}
+
+/* ── Completion screen ── */
+function SecDone({onRestart}){
+  return (
+    <div className="doc-section">
+      <div className="done-screen">
+        <div className="big-stamp">FIELD-READY</div>
+        <h2>Briefing Complete</h2>
+        <p>You can move, fight, read terrain, promote, pick a doctrine, spend a budget, and read your dossier.</p>
+        <p style={{fontFamily:'var(--font-terminal)',color:'var(--hq-olive)',fontSize:16,letterSpacing:2}}>▸ Return to the desk and load a sealed briefing.</p>
+        <div style={{display:'flex',justifyContent:'center',gap:10,marginTop:16}}>
+          <button className="btn-replay" onClick={onRestart}>↺ Replay Tutorial</button>
+          <a className="btn-replay primary" href="Strategy Game Menu.html" style={{textDecoration:'none',display:'inline-flex',alignItems:'center',gap:6}}>▸ Enter Command Desk</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main FieldManual component ── */
+const SECTIONS=[
+  {id:'briefing', num:'01', title:'The Objective',    Comp:SecBriefing},
+  {id:'move',     num:'02', title:'Move a Unit',      Comp:SecMove},
+  {id:'combat',   num:'03', title:'Attack & Odds',    Comp:SecCombat},
+  {id:'terrain',  num:'04', title:'Read the Ground',  Comp:SecTerrain},
+  {id:'ranks',    num:'05', title:'Promotion & XP',   Comp:SecRanks},
+  {id:'doctrines',num:'06', title:'Pick a Doctrine',  Comp:SecDoctrines},
+  {id:'wp',       num:'07', title:'War Points',       Comp:SecWarPoints},
+  {id:'dossier',  num:'08', title:'Read the Dossier', Comp:SecDossier},
+];
+
+function FieldManual(){
+  const [idx,setIdx]=useState(0);
+  const [done,setDone]=useState(()=>new Set());
+  const [finished,setFinished]=useState(false);
+  const contentRef=useRef(null);
+
+  function goto(i){setIdx(i);if(contentRef.current)contentRef.current.scrollTop=0;}
+  function advance(){const n=new Set(done);n.add(SECTIONS[idx].id);setDone(n);if(idx<SECTIONS.length-1)goto(idx+1);else setFinished(true);}
+  function restart(){setDone(new Set());setFinished(false);goto(0);}
+
+  useEffect(()=>{
+    const hint=document.getElementById('hint');
+    if(!hint)return;
+    const map={briefing:'▸ Click a square in the diagram',move:'▸ Click the soldier · then click a teal square',combat:'▸ Rotate the defender · resolve a roll',terrain:'▸ Click each biome to read its modifiers',ranks:'▸ Promote a unit · watch its stats change',doctrines:'▸ Inspect all three doctrines',wp:'▸ Spend at least one war point',dossier:'▸ Click each callout to highlight a panel'};
+    hint.textContent=finished?'▸ Briefing complete · return to the desk':map[SECTIONS[idx].id]||'▸ Read each section';
+  },[idx,finished]);
+
+  const pct=Math.round(done.size/SECTIONS.length*100);
+  const Comp=finished?null:SECTIONS[idx].Comp;
+
+  return (
+    <div className="manual">
+      <aside className="toc">
+        <div className="toc-head">
+          <div className="kicker">// MANUAL · v 0.1.5</div>
+          <h2>Field Manual</h2>
+          <span className="stamp">CADET</span>
+          <div className="toc-progress">
+            <span>{pct}<span className="nb">%</span></span>
+            <div className="bar" style={{'--p':pct+'%'}}><i /></div>
+          </div>
+        </div>
+        <ul className="toc-list">
+          {SECTIONS.map((s,i)=>(
+            <li key={s.id} className={[(i===idx&&!finished?'active':''),done.has(s.id)?'done':''].filter(Boolean).join(' ')} onClick={()=>{setFinished(false);goto(i);}}>
+              <span className="num">§{s.num}</span>
+              <span className="ttl">{s.title}</span>
+              <span className="arrow">{i===idx&&!finished?'▸':'→'}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="toc-foot">
+          <span>// {done.size}/{SECTIONS.length} DRILLS LOGGED</span>
+          <div className="nav-btns">
+            <button onClick={()=>goto(Math.max(0,idx-1))} disabled={idx===0||finished}>◀ PREV</button>
+            <button className="primary" onClick={advance} disabled={finished}>NEXT ▸</button>
+          </div>
+        </div>
+      </aside>
+      <main className="doc-content" ref={contentRef}>
+        {finished?<SecDone onRestart={restart} />:<Comp onAdvance={advance} />}
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<FieldManual />);
+</script>
+</body>
+</html>

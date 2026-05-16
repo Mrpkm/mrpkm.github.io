@@ -156,34 +156,35 @@
     patch: () => panel(`
       <header>
         <h2>Patch Notes</h2>
-        <span class="stamp">v1.5.0</span>
+        <span class="stamp">v0.1.5.0</span>
       </header>
-      <p class="meta">Latest build &mdash; field update</p>
+      <p class="meta">v0.1.5.0 &mdash; Almost Live!</p>
       <div class="patch">
-        <h3>New Win Condition</h3>
+        <h3>New Screens &amp; Design</h3>
         <ul>
-          <li><span class="tag add">ADD</span>Map is now visually divided into a red zone (P1) and blue zone (P2) with a tinted overlay.</li>
-          <li><span class="tag add">ADD</span>Game ends when any unit reaches the far end of the map (the enemy's starting side). A full-screen end-game overlay displays the result.</li>
-          <li><span class="tag bal">BAL</span>Eliminating all enemy units still ends the game as before.</li>
+          <li><span class="tag add">ADD</span>Entry screen (index.html) redesigned — classified dossier with animated CTA button and bottom ticker.</li>
+          <li><span class="tag add">ADD</span>Map Builder completely redesigned with real PNG tiles, proper tool tray, facing compass rose, and deployment zone overlays.</li>
+          <li><span class="tag add">ADD</span>Field Manual &mdash; interactive 8-section rules tutorial with live mini-boards, drill progress tracking, and completion screen. Replaces the static text rules.</li>
         </ul>
-        <h3>Interface Overhaul</h3>
+        <h3>Gameplay Fixes</h3>
         <ul>
-          <li><span class="tag add">ADD</span>Briefing input replaced with a modal dialog button. The only place to create briefings is the Pre-Game Setup screen.</li>
-          <li><span class="tag add">ADD</span>Pre-Game Setup now saves all settings to local memory &mdash; switching tabs or navigating away no longer resets your army.</li>
-          <li><span class="tag add">ADD</span>Reset button added to Pre-Game Setup header to clear saved state.</li>
-          <li><span class="tag add">ADD</span>Warning shown when attempting to deploy with no units placed on the map.</li>
-          <li><span class="tag add">ADD</span>AI Game button is now blurred and disabled with &ldquo;Coming Soon&rdquo; tooltip.</li>
+          <li><span class="tag fix">FIX</span>Deploy button is now fully disabled (not just warned) when no units are placed on the map. Cannot be clicked at all without at least one unit.</li>
+          <li><span class="tag fix">FIX</span>Game-over overlay now shows &ldquo;Go Back to HQ&rdquo; as the only action, navigating cleanly back to the Command Desk.</li>
+          <li><span class="tag fix">FIX</span>Restore Last Map button is now blurred and marked &ldquo;Coming Soon&rdquo; — same treatment as the AI Game button.</li>
         </ul>
-        <h3>Bug Fixes</h3>
+        <h3>Visuals</h3>
         <ul>
-          <li><span class="tag fix">FIX</span>Rotate button now works correctly &mdash; clicking a unit&rsquo;s own cell in Rotate mode no longer deselects it.</li>
-          <li><span class="tag fix">FIX</span>Actions Remaining can no longer go below 0 after combat or movement.</li>
-          <li><span class="tag fix">FIX</span>Unit bobbing animations now start immediately when the game begins, not only after the first input.</li>
-          <li><span class="tag fix">FIX</span>Game rules version updated to match patch notes (v1.5.0).</li>
+          <li><span class="tag add">ADD</span>Player 1 units now show a blue tint (opposite of their red zone) — both sides are now visually distinct by zone color.</li>
+          <li><span class="tag add">ADD</span>Conquered territory: when a unit crosses into the enemy&apos;s zone, that tile gets a pulsing color overlay indicating occupied ground.</li>
+          <li><span class="tag add">ADD</span>Quick-start tutorial shown at the beginning of each 2-player game — 3 step overlay highlighting Move, Attack, and End Turn buttons. Always skippable.</li>
         </ul>
-        <h3>Economy</h3>
+        <h3>Previous (v1.5.0)</h3>
         <ul>
-          <li><span class="tag add">ADD</span>War-point budget, spent, and remaining values shown in the Briefing Dossier.</li>
+          <li><span class="tag add">ADD</span>Red/Blue zone territory overlays on the map.</li>
+          <li><span class="tag add">ADD</span>End-game breakthrough win condition (reach the enemy start row).</li>
+          <li><span class="tag add">ADD</span>AI Game and Restore Map buttons marked &ldquo;Coming Soon&rdquo;.</li>
+          <li><span class="tag add">ADD</span>War-point economy display in the Briefing Dossier.</li>
+          <li><span class="tag fix">FIX</span>Rotate mode fixed &middot; actions can&apos;t go below 0 &middot; unit animations start immediately.</li>
         </ul>
       </div>
     `),
@@ -191,37 +192,46 @@
     whatsnew: () => panel(`
       <header>
         <h2>What's New?</h2>
-        <span class="stamp">v1.5.0</span>
+        <span class="stamp">v0.1.5.0</span>
       </header>
-      <p class="meta">Field bulletin &mdash; v1.5.0 update</p>
+      <p class="meta">Field bulletin &mdash; v0.1.5.0 &ldquo;Almost Live!&rdquo;</p>
 
       <div class="letter urgent">
-        <div class="from"><span><strong>NEW</strong> &middot; Territory Win Condition</span><span>v1.5.0</span></div>
-        <div>The map is now divided into a Red side and Blue side with a colored overlay.
-          Race your units to the enemy&rsquo;s starting edge to win by breakthrough &mdash;
-          or destroy all opposition the old-fashioned way.</div>
+        <div class="from"><span><strong>NEW</strong> &middot; Entry Screen Redesign</span><span>v0.1.5.0</span></div>
+        <div>The landing page is now a proper classified dossier &mdash; animated CTA button,
+          scanline vignette, ticker at the bottom, and corner glow halos. First impressions matter.</div>
+      </div>
+
+      <div class="letter urgent">
+        <div class="from"><span><strong>NEW</strong> &middot; Map Builder Redesign</span><span>v0.1.5.0</span></div>
+        <div>The tactical map editor has been overhauled with real PNG terrain tiles, a proper
+          tool tray with facing compass rose, deployment zone overlays, and a blurred desk background.</div>
+      </div>
+
+      <div class="letter urgent">
+        <div class="from"><span><strong>NEW</strong> &middot; Interactive Field Manual</span><span>v0.1.5.0</span></div>
+        <div>The old static rule text is replaced by a full 8-section interactive tutorial:
+          The Objective, Move a Unit, Attack &amp; Odds, Terrain, Ranks, Doctrines, War Points, and the Dossier.
+          Each section has a live mini-board drill and progress tracking.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Briefing Manager Overhaul</span><span>v1.5.0</span></div>
-        <div>Pre-Game Setup is now the single home for all briefing management.
-          Your army configuration is auto-saved to local memory so switching doctrine
-          tabs or leaving the page no longer erases your work. A Reset button is available
-          in the header if you want to start fresh.</div>
+        <div class="from"><span>Quick-Start In-Game Tutorial</span><span>v0.1.5.0</span></div>
+        <div>At the start of every 2-player battle a 3-step overlay highlights the Move, Attack,
+          and End Turn buttons. Skippable any time. New commanders will know where to look.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Bug Fixes &amp; Polish</span><span>v1.5.0</span></div>
-        <div>Rotate mode fixed (clicking your own unit no longer deselects it).
-          Action counters no longer go negative.
-          Unit animations now start immediately at battle start.
-          AI Game is temporarily disabled &mdash; coming in a future update.</div>
+        <div class="from"><span>Unit Colors &amp; Conquered Territory</span><span>v0.1.5.0</span></div>
+        <div>Player 1&rsquo;s units now show a blue tint (opposite of their red zone) to match
+          Player 2&rsquo;s existing red treatment. When a unit crosses into enemy ground, the tile
+          gets a pulsing color overlay indicating captured territory.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Economy Display</span><span>v1.5.0</span></div>
-        <div>War-point budget, spending, and remaining balance are now shown in the
-          Briefing Dossier during play.</div>
+        <div class="from"><span>Fixes &amp; Guards</span><span>v0.1.5.0</span></div>
+        <div>Deploy button fully disabled (not just warned) with zero units. Game-over overlay
+          now navigates back to HQ. Restore Last Map marked &ldquo;Coming Soon&rdquo;.</div>
       </div>
     `),
 
@@ -254,15 +264,18 @@
           </div>
           <div class="cmd-card-p" id="card-rules-play">
             <span class="ckey">F4</span>
-            <h4>&#9658; Rules Manual</h4>
-            <div class="cdesc">Consolidated v0.18 ruleset &mdash; combat, units, economy, doctrines.</div>
+            <h4>&#9658; Field Manual</h4>
+            <div class="cdesc">Interactive 8-section rules tutorial with live mini-boards and drills.</div>
             <span class="cstat">CONSULT</span>
           </div>
-          <div class="cmd-card-p" id="card-last">
-            <span class="ckey">F5</span>
-            <h4>&#9658; Restore Last Map</h4>
-            <div class="cdesc">Re-open the briefing you most recently loaded from the field safe.</div>
-            <span class="cstat">${lastOnFile ? 'ON FILE' : 'NONE ON FILE'}</span>
+          <div class="cmd-card-p-wrapper">
+            <div class="cmd-card-p coming-soon-p" id="card-last">
+              <span class="ckey">F5</span>
+              <h4>&#9658; Restore Last Map</h4>
+              <div class="cdesc">Re-open the briefing you most recently loaded from the field safe.</div>
+              <span class="cstat">${lastOnFile ? 'ON FILE' : 'NONE ON FILE'}</span>
+            </div>
+            <div class="coming-soon-badge-p">COMING SOON</div>
           </div>
           <div class="cmd-card-p" id="card-builder-play">
             <span class="ckey">F6</span>
@@ -282,8 +295,7 @@
         window.location.href = '../tools/pregame-setup.html';
       });
       document.getElementById('card-rules-play').addEventListener('click', () => {
-        closePanel();
-        openPanel('rules');
+        window.location.href = 'field-manual.html';
       });
       document.getElementById('card-last').addEventListener('click', () => {
         if (localStorage.getItem('last_briefing')) {

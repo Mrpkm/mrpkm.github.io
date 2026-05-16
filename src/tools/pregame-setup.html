@@ -1347,7 +1347,7 @@ function BriefingPage({ doctrineId, setup }) {
         <div className="brief-actions">
           <button className="btn" onClick={copy}>{copied ? '✓ copied' : 'Copy .md'}</button>
           <button className="btn alt" onClick={download}>Download .md</button>
-          <button className="btn alt" onClick={deploy} style={{background: hasUnits ? '#4a6b3a' : '#6b3a3a', borderColor: hasUnits ? '#4a6b3a' : '#6b3a3a', letterSpacing:'3px'}} title={hasUnits ? '' : 'Place units on the map first (MAP tab)'}>
+          <button className="btn alt" onClick={deploy} disabled={!hasUnits} style={{background: hasUnits ? '#4a6b3a' : '#6b3a3a', borderColor: hasUnits ? '#4a6b3a' : '#6b3a3a', letterSpacing:'3px', opacity: hasUnits ? 1 : 0.5, cursor: hasUnits ? 'pointer' : 'not-allowed'}} title={hasUnits ? '' : 'Place units on the map first (MAP tab)'}>
             {twpPhase === '1' ? 'DONE — PLAYER 1 ▸' : twpPhase === '2' ? '▶ DEPLOY TO BATTLE' : '▶ Deploy to Game'}
           </button>
         </div>
