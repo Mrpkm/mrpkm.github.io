@@ -18,6 +18,8 @@
       var el = document.createElement('div');
       el.className = 'mm-cell';
       el.dataset.biome = cell.biome;
+      el.dataset.row = cell.row;
+      el.dataset.col = cell.col;
       _cells[cell.row + ',' + cell.col] = el;
       frag.appendChild(el);
     });

@@ -669,11 +669,11 @@
       var inner = el.querySelector('.twp-inner');
       if (inner) inner.style.transform = 'rotate(' + (-_boardRot) + 'deg)';
 
-      // Update facing indicator rotation
+      // Update facing indicator — subtract board rotation so net visual is just the facing angle
       var facingEl = el.querySelector('.twp-facing');
       if (facingEl) {
         var FROT = { N: -90, S: 90, E: 0, W: 180 };
-        facingEl.style.transform = 'rotate(' + (FROT[unit.facing] || 0) + 'deg)';
+        facingEl.style.transform = 'rotate(' + ((FROT[unit.facing] || 0) - _boardRot) + 'deg)';
       }
 
       _updateHpPips(el, unit);
@@ -698,6 +698,8 @@
     if (mapRoot) mapRoot.style.transform = 'rotate(' + _boardRot + 'deg)';
     var compass = document.querySelector('.field-map .compass');
     if (compass) compass.style.transform = 'rotate(' + _boardRot + 'deg)';
+
+    _updateMinimap();
   }
 
   var UNIT_SPRITE = {
@@ -784,14 +786,14 @@
       hpBar.appendChild(pip);
     }
     inner.appendChild(hpBar);
+    el.appendChild(inner);
 
-    // Facing indicator — blue ">"
+    // Facing indicator — outside .twp-inner so rotation is independent
     var fInd = document.createElement('span');
     fInd.className = 'twp-facing';
     fInd.textContent = '>';
-    inner.appendChild(fInd);
+    el.appendChild(fInd);
 
-    el.appendChild(inner);
     return el;
   }
 
@@ -806,12 +808,28 @@
   /* ── Panel show / wire ─────────────────────────────────────── */
   function _showPanel() {
     var normal   = document.getElementById('normal-dossier-content');
-    var overview = document.querySelector('.overview');
     var twpPanel = document.getElementById('twp-panel');
-    if (normal)   normal.style.display   = 'none';
-    if (overview) overview.style.display = 'none';
+    if (normal)   normal.style.display = 'none';
     if (twpPanel) twpPanel.style.display = '';
     _wirePanelButtons();
+  }
+
+  function _updateMinimap() {
+    var mmRoot = document.getElementById('minimap-root');
+    if (!mmRoot) return;
+    mmRoot.querySelectorAll('.mm-cell').forEach(function (c) {
+      c.classList.remove('mm-has-p1', 'mm-has-p2');
+    });
+    _units.forEach(function (u) {
+      var cell = mmRoot.querySelector('.mm-cell[data-row="' + u.row + '"][data-col="' + u.col + '"]');
+      if (cell) cell.classList.add(u.player === 1 ? 'mm-has-p1' : 'mm-has-p2');
+    });
+    var ovCoords = document.getElementById('ov-coords');
+    if (ovCoords) {
+      var p1 = _units.filter(function (u) { return u.player === 1; }).length;
+      var p2 = _units.filter(function (u) { return u.player === 2; }).length;
+      ovCoords.textContent = 'P1 ' + p1 + ' · P2 ' + p2;
+    }
   }
 
   function _wirePanelButtons() {
