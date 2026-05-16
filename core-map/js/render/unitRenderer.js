@@ -87,7 +87,7 @@
       overlay.className = 'attack-overlay';
       mapRoot.appendChild(overlay);
 
-      window.ChromaRenderer.createGifSprite(attackSrc)
+      window.ChromaRenderer.createSprite(attackSrc, { displayWidth: 320, displayHeight: 320 })
         .then(function (result) {
           result.el.className = 'attack-overlay__canvas';
           overlay.appendChild(result.el);

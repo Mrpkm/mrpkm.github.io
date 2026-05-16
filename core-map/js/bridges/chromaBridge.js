@@ -28,7 +28,7 @@
     var wrapper = document.createElement('div');
     wrapper.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
 
-    window.ChromaRenderer.createSprite(src)
+    window.ChromaRenderer.createSprite(src, { displayWidth: 48, displayHeight: 48 })
       .then(function (result) {
         var el = result.el;
         el.style.maxWidth  = '100%';
