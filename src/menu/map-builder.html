@@ -336,7 +336,7 @@
       <div className="section">
         <div className="section-head"><span className="num">01</span><h4>Move Order</h4></div>
         <p style={{fontFamily:'Courier Prime,monospace',fontSize:12,color:'var(--ink)',lineHeight:1.5,padding:'4px 0'}}>
-          Click a unit token on the field map. Reachable tiles will glow <span style={{color:'var(--teal)'}}>teal</span>; click one to march.
+          Click a unit token on the field map. Reachable tiles will glow <span style={{color:'var(--gold)'}}>gold</span>; click one to march.
         </p>
       </div>
     );
@@ -532,7 +532,7 @@
     const switchTool=useCallback((t)=>{setTool(t);setPending(new Set());setSelUnitId(null);setReachable(null);},[]);
 
     const selectedUnit=units.find((u)=>u.id===selUnitId)||null;
-    const hoverTerrain=hoveredCell&&grid?.[hoveredCell[0]]?.[hoveredCell[1]]>=0?TERRAINS[grid[hoveredCell[0]][hoveredCell[1]]].name:null:null;
+    const hoverTerrain=hoveredCell?(grid?.[hoveredCell[0]]?.[hoveredCell[1]]>=0?TERRAINS[grid[hoveredCell[0]][hoveredCell[1]]].name:null):null;
 
     return (
       <>

@@ -10,6 +10,7 @@
   --paper-dark: #d9c79c;
   --paper-light: #f7ecd0;
   --teal: #6fd3d6;
+  --gold: #ffd34a;
   --red: #b22b2b;
   --olive: #6b4e2a;
   --blue: #2c4d8a;
@@ -467,11 +468,11 @@ body::after {
 }
 
 .cell.legal-move {
-  outline: 1.5px solid var(--teal);
+  outline: 1.5px solid var(--gold);
   outline-offset: -2px;
 }
 .cell.legal-move::after {
-  background: radial-gradient(circle, rgba(111,211,214,0.45), rgba(111,211,214,0.18) 60%, transparent 75%);
+  background: radial-gradient(circle, rgba(255,211,74,0.45), rgba(255,211,74,0.18) 60%, transparent 75%);
 }
 .cell.attack-target {
   outline: 2px solid var(--red);
@@ -567,7 +568,7 @@ body::after {
   pointer-events: none;
 }
 .mm-cell.mm-legal {
-  outline: 1px solid var(--teal);
+  outline: 1px solid var(--gold);
   outline-offset: -1px;
   z-index: 1;
 }

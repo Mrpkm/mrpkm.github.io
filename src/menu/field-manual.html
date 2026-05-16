@@ -120,21 +120,25 @@ table.hq-tab td.num { font-family:var(--font-terminal); color:var(--hq-red); fon
 .miniboard { display:grid; border:1px solid var(--hq-ink); box-shadow:0 0 0 2px var(--hq-paper-dark),0 0 0 3px var(--hq-ink),inset 0 0 28px rgba(60,40,15,0.35); background:var(--hq-paper); position:relative; }
 .mbcell { position:relative; border:1px solid rgba(40,25,10,0.30); background-size:cover; background-repeat:no-repeat; filter:sepia(0.25) saturate(0.85) brightness(0.95); cursor:pointer; overflow:hidden; }
 .mbcell::after { content:""; position:absolute; inset:0; background:rgba(239,226,196,0.10); pointer-events:none; }
-.mbcell.legal { outline:1.5px solid var(--hq-teal); outline-offset:-2px; z-index:2; }
-.mbcell.legal::after { background:radial-gradient(circle,rgba(111,211,214,0.5),rgba(111,211,214,0.18) 60%,transparent 75%); }
+.mbcell.legal { outline:1.5px solid var(--hq-rank-gold); outline-offset:-2px; z-index:2; }
+.mbcell.legal::after { background:radial-gradient(circle,rgba(255,211,74,0.5),rgba(255,211,74,0.18) 60%,transparent 75%); }
 .mbcell.atkrange { outline:1.5px dashed var(--hq-red); outline-offset:-2px; z-index:2; }
 .mbcell.atkrange::after { background:rgba(178,43,43,0.18); }
 .mbcell.target::after { background:radial-gradient(circle,rgba(255,211,74,0.55),rgba(255,211,74,0.15) 60%,transparent 80%); }
 .mbcell.hovered::after { background:rgba(255,211,74,0.30); }
-.mb-unit { position:absolute; inset:3px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:4; pointer-events:auto; }
-.mb-unit img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55)) drop-shadow(0 0 2px rgba(255,255,255,0.25)); pointer-events:none; }
-.mb-unit[data-side="enemy"] img { filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55)) hue-rotate(-30deg) saturate(1.2); }
-.mb-unit.selected::before { content:""; position:absolute; inset:-3px; border:1.5px solid var(--hq-rank-gold); pointer-events:none; animation:pulse-ring 1.2s ease-in-out infinite; }
+.mb-unit { position:absolute; cursor:pointer; z-index:4; pointer-events:auto; }
+.mb-unit.selected::before { content:""; position:absolute; inset:-3px; border:1.5px solid var(--hq-rank-gold); pointer-events:none; animation:pulse-ring 1.2s ease-in-out infinite; z-index:6; }
 @keyframes pulse-ring { 0%,100%{box-shadow:0 0 6px rgba(255,211,74,0.6)}50%{box-shadow:0 0 14px rgba(255,211,74,0.9)} }
-.mb-unit.bob   { animation:unit-bob 2.4s ease-in-out infinite; }
-.mb-unit.rumble{ animation:tank-rumble 3s ease-in-out infinite; }
 @keyframes unit-bob   { 0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)} }
 @keyframes tank-rumble{ 0%,100%{transform:translateX(0)}25%{transform:translateX(-0.5px)}75%{transform:translateX(0.5px)} }
+/* unit-chip — same system as map-builder */
+.unit-chip { position:absolute; inset:6%; display:flex; align-items:center; justify-content:center; pointer-events:none; animation:unit-bob 2.4s ease-in-out infinite; }
+.unit-chip.tanks    { animation-name:tank-rumble; animation-duration:3s; }
+.unit-chip.cavalry  { animation-duration:1.7s; }
+.unit-chip img { max-width:100%; max-height:100%; image-rendering:pixelated; filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55)); pointer-events:none; }
+.unit-chip.player { box-shadow:0 0 0 2px rgba(44,77,138,0.85), inset 0 0 0 1px rgba(255,255,255,0.05); }
+.unit-chip.enemy  { box-shadow:0 0 0 2px rgba(178,43,43,0.85), inset 0 0 0 1px rgba(255,255,255,0.05); filter:sepia(0.2) hue-rotate(320deg) saturate(1.25); }
+.unit-chip .facing-tag { position:absolute; top:0; right:0; background:var(--hq-ink); color:var(--hq-teal); font-family:var(--font-terminal); font-size:10px; line-height:1; padding:1px 3px; border:1px solid var(--hq-paper-dark); z-index:5; pointer-events:none; }
 .mb-facing { position:absolute; z-index:5; font-family:var(--font-terminal); font-size:14px; color:var(--hq-teal); text-shadow:0 0 4px rgba(111,211,214,0.9); pointer-events:none; }
 .hq-flag { position:absolute; inset:4px; z-index:4; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:13px; color:var(--hq-paper); background:var(--hq-red); border:1px solid var(--hq-ink); letter-spacing:1px; box-shadow:0 1px 3px rgba(0,0,0,0.4); }
 .coach-hand { position:absolute; pointer-events:none; z-index:20; font-family:var(--font-display); color:var(--hq-teal); text-shadow:0 0 8px rgba(111,211,214,0.85); font-size:22px; letter-spacing:1px; animation:hand-bob 1.0s ease-in-out infinite; white-space:nowrap; }
@@ -268,7 +272,7 @@ table.hq-tab td.num { font-family:var(--font-terminal); color:var(--hq-red); fon
 </div>
 
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useMemo, useRef } = React;
+const { useState, useEffect, useMemo, useRef, useContext } = React;
 
 /* ── Asset paths (relative to this file at src/menu/) ── */
 const TILE = {
@@ -278,12 +282,62 @@ const TILE = {
   S: 'assets/tiles/swamp.png',
 };
 const SPRITE = {
-  infantry:  'assets/sprites/infantry.png',
-  cavalry:   'assets/sprites/cavalry.png',
-  tank:      'assets/sprites/tank.png',
-  motorized: 'assets/sprites/motorized.png',
-  artillery: 'assets/sprites/artillery.png',
+  infantry:  'assets/units/infantry.png',
+  cavalry:   'assets/units/cavalry.png',
+  tank:      'assets/units/tank.png',
+  motorized: 'assets/units/motorized-infantry.png',
+  artillery: 'assets/units/artillery.png',
 };
+
+/* ── Chroma key (same algorithm as map-builder) ── */
+function chromaKey(dataUrl) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      let id;
+      try { id = ctx.getImageData(0, 0, c.width, c.height); } catch { resolve(dataUrl); return; }
+      const d = id.data;
+      const kr = d[0], kg = d[1], kb = d[2], tol = 60;
+      for (let i = 0; i < d.length; i += 4) {
+        if (Math.abs(d[i]-kr)<tol && Math.abs(d[i+1]-kg)<tol && Math.abs(d[i+2]-kb)<tol) d[i+3]=0;
+      }
+      ctx.putImageData(id, 0, 0);
+      let minX=c.width,maxX=-1,minY=c.height,maxY=-1;
+      for (let y=0;y<c.height;y++) for (let x=0;x<c.width;x++) {
+        if (d[(y*c.width+x)*4+3]>8) {
+          if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
+        }
+      }
+      if (maxX===-1) { resolve(c.toDataURL('image/png')); return; }
+      const out=document.createElement('canvas');
+      out.width=maxX-minX+1; out.height=maxY-minY+1;
+      const octx=out.getContext('2d');
+      octx.imageSmoothingEnabled=false;
+      octx.drawImage(c,minX,minY,out.width,out.height,0,0,out.width,out.height);
+      resolve(out.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+const SpritesCtx = React.createContext({});
+
+function SpritesProvider({ children }) {
+  const [sprites, setSprites] = useState({});
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(Object.entries(SPRITE).map(async ([type, src]) => [type, await chromaKey(src)]))
+      .then(pairs => { if (!cancelled) setSprites(Object.fromEntries(pairs)); });
+    return () => { cancelled = true; };
+  }, []);
+  return <SpritesCtx.Provider value={sprites}>{children}</SpritesCtx.Provider>;
+}
 const ICON = {
   infantry:  'assets/icons/infantry.png',
   cavalry:   'assets/icons/cavalry.png',
@@ -304,7 +358,10 @@ function key(r,c){ return r+','+c; }
 function facingGlyph(f){ return {N:'▲',S:'▼',E:'▶',W:'◀'}[f]||'▲'; }
 function facingPos(f){ switch(f){ case 'N':return{top:-2,left:'50%',transform:'translateX(-50%)'}; case 'S':return{bottom:-2,left:'50%',transform:'translateX(-50%)'}; case 'E':return{right:-2,top:'50%',transform:'translateY(-50%)'}; case 'W':return{left:-2,top:'50%',transform:'translateY(-50%)'}; } }
 
+const UNIT_ABBR = {infantry:'INF',cavalry:'CAV',tank:'TNK',motorized:'MOT',artillery:'ART'};
+
 function MiniBoard({ rows, cols, terrain={}, units=[], hq=[], legal=new Set(), atkrange=new Set(), target=null, hoverKey=null, onCellClick, onUnitClick, onCellHover, coach=null, style={}, scale=52 }) {
+  const sprites = useContext(SpritesCtx);
   const tileFor=(r,c)=>TILE[terrain[key(r,c)]||'P']||TILE.P;
   const cells=[];
   for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
@@ -329,13 +386,19 @@ function MiniBoard({ rows, cols, terrain={}, units=[], hq=[], legal=new Set(), a
       {cells}
       {units.map(u=>{
         const left=u.c*scale, top=u.r*scale;
-        const bobClass=u.type==='tank'?'rumble':'bob';
+        const side=u.side||'player';
+        const typeClass=u.type==='tank'?'tanks':u.type;
         return (
-          <div key={u.id} className={`mb-unit ${bobClass} ${u.selected?'selected':''}`} data-type={u.type} data-side={u.side||'player'}
+          <div key={u.id} className={`mb-unit${u.selected?' selected':''}`} data-type={u.type} data-side={side}
             style={{position:'absolute',left,top,width:scale,height:scale}}
             onClick={e=>{e.stopPropagation();onUnitClick&&onUnitClick(u);}}>
-            <img src={SPRITE[u.type]} alt={u.type} />
-            {u.facing&&<div className="mb-facing" style={facingPos(u.facing)}>{facingGlyph(u.facing)}</div>}
+            <div className={`unit-chip ${side} ${typeClass}`}>
+              {sprites[u.type]
+                ?<img src={sprites[u.type]} alt={u.type} draggable={false} />
+                :<span style={{fontFamily:'VT323,monospace',color:'#fff',textShadow:'0 0 4px #000',fontSize:scale*0.3}}>{UNIT_ABBR[u.type]||'?'}</span>
+              }
+              {u.facing&&<div className="facing-tag">{u.facing}</div>}
+            </div>
           </div>
         );
       })}
@@ -726,7 +789,7 @@ function FieldManual(){
   useEffect(()=>{
     const hint=document.getElementById('hint');
     if(!hint)return;
-    const map={briefing:'▸ Click a square in the diagram',move:'▸ Click the soldier · then click a teal square',combat:'▸ Rotate the defender · resolve a roll',terrain:'▸ Click each biome to read its modifiers',ranks:'▸ Promote a unit · watch its stats change',doctrines:'▸ Inspect all three doctrines',wp:'▸ Spend at least one war point',dossier:'▸ Click each callout to highlight a panel'};
+    const map={briefing:'▸ Click a square in the diagram',move:'▸ Click the soldier · then click a gold square',combat:'▸ Rotate the defender · resolve a roll',terrain:'▸ Click each biome to read its modifiers',ranks:'▸ Promote a unit · watch its stats change',doctrines:'▸ Inspect all three doctrines',wp:'▸ Spend at least one war point',dossier:'▸ Click each callout to highlight a panel'};
     hint.textContent=finished?'▸ Briefing complete · return to the desk':map[SECTIONS[idx].id]||'▸ Read each section';
   },[idx,finished]);
 
@@ -769,7 +832,7 @@ function FieldManual(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById('app')).render(<FieldManual />);
+ReactDOM.createRoot(document.getElementById('app')).render(<SpritesProvider><FieldManual /></SpritesProvider>);
 </script>
 </body>
 </html>

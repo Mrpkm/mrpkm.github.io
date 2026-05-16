@@ -31,7 +31,7 @@
 
   /* ── Tutorial ────────────────────────────────────────────────── */
   var TUT_STEPS = [
-    { title:'MOVE YOUR UNITS',   body:'Click a unit to select it. <strong>Teal squares</strong> show legal moves — click one to march. Each unit gets 2 actions per turn.', target:'twp-btn-move' },
+    { title:'MOVE YOUR UNITS',   body:'Click a unit to select it. <strong>Gold squares</strong> show legal moves — click one to march. Each unit gets 2 actions per turn.', target:'twp-btn-move' },
     { title:'ATTACK ENEMIES',    body:'Switch to <strong>Attack</strong> mode, then click a red-highlighted enemy. Direction matters — rear attacks deal more damage. They counter-strike!', target:'twp-btn-attack' },
     { title:'END YOUR TURN',     body:'When your units have acted, press <strong>End Turn</strong>. The board rotates — each player always faces upward.', target:'twp-btn-end' },
   ];
@@ -682,6 +682,56 @@
     Artillery: '../src/menu/assets/units/artillery.png',
   };
 
+  /* ── Chroma key (same algorithm as map-builder) ── */
+  var _cachedSprites = {};
+
+  function _chromaKey(src) {
+    return new Promise(function(resolve) {
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        var c = document.createElement('canvas');
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        var ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        var id;
+        try { id = ctx.getImageData(0, 0, c.width, c.height); } catch(e) { resolve(src); return; }
+        var d = id.data;
+        var kr = d[0], kg = d[1], kb = d[2], tol = 60;
+        for (var i = 0; i < d.length; i += 4) {
+          if (Math.abs(d[i]-kr)<tol && Math.abs(d[i+1]-kg)<tol && Math.abs(d[i+2]-kb)<tol) d[i+3]=0;
+        }
+        ctx.putImageData(id, 0, 0);
+        var minX=c.width,maxX=-1,minY=c.height,maxY=-1;
+        for (var y=0;y<c.height;y++) for (var x=0;x<c.width;x++) {
+          if (d[(y*c.width+x)*4+3]>8) {
+            if(x<minX)minX=x; if(x>maxX)maxX=x; if(y<minY)minY=y; if(y>maxY)maxY=y;
+          }
+        }
+        if (maxX===-1) { resolve(c.toDataURL('image/png')); return; }
+        var out = document.createElement('canvas');
+        out.width = maxX-minX+1; out.height = maxY-minY+1;
+        var octx = out.getContext('2d');
+        octx.imageSmoothingEnabled = false;
+        octx.drawImage(c, minX, minY, out.width, out.height, 0, 0, out.width, out.height);
+        resolve(out.toDataURL('image/png'));
+      };
+      img.onerror = function() { resolve(src); };
+      img.src = src;
+    });
+  }
+
+  function _preloadSprites() {
+    Object.keys(UNIT_SPRITE).forEach(function(type) {
+      _chromaKey(UNIT_SPRITE[type]).then(function(dataUrl) {
+        _cachedSprites[type] = dataUrl;
+        document.querySelectorAll('.twp-unit[data-unit-type="' + type + '"] .twp-inner img').forEach(function(img) {
+          img.src = dataUrl;
+        });
+      });
+    });
+  }
+
   function _buildUnitEl(unit) {
     var el = document.createElement('div');
     el.className = 'unit twp-unit twp-p' + unit.player;
@@ -694,9 +744,9 @@
     inner.className = 'twp-inner';
 
     var img = document.createElement('img');
-    img.src = UNIT_SPRITE[unit.type] || UNIT_SPRITE.Infantry;
+    img.src = _cachedSprites[unit.type] || UNIT_SPRITE[unit.type] || UNIT_SPRITE.Infantry;
     img.alt = unit.type;
-    img.style.cssText = 'width:100%;height:100%;object-fit:contain;image-rendering:pixelated;pointer-events:none;';
+    img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;image-rendering:pixelated;pointer-events:none;filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55));';
     inner.appendChild(img);
 
     // HP pip bar
@@ -885,6 +935,8 @@
     btn.classList.toggle('twp-mode-active', active);
     btn.disabled = !!disabled;
   }
+
+  _preloadSprites();
 
   /* ── Expose ─────────────────────────────────────────────────── */
   window.TwoPlayerMode = {
