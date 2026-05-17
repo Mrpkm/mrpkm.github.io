@@ -25,20 +25,25 @@
   var _panelWired    = false;
   var _flashTimeout  = null;
   var _endOverlayShown = false;
-  var _tutStep       = -1;
+  var _tutStep            = -1;
+  var _p1ActionPoints     = 20;   // action-point pool; P2 starts at 0, gains 20 when P1 ends first turn
+  var _p2ActionPoints     = 0;
 
   var SHORT = { Infantry:'INF', Cavalry:'CAV', Tanks:'TNK', Motorized:'MOT', Artillery:'ART' };
 
   /* ── Tutorial ────────────────────────────────────────────────── */
   var TUT_STEPS = [
-    { title:'MOVE YOUR UNITS',   body:'Click a unit to select it. <strong>Gold squares</strong> show legal moves — click one to march. Each unit gets 2 actions per turn.', target:'twp-btn-move' },
+    { title:'ACTION POINTS',     body:'You start each turn with <strong>20 action points</strong>. Moving costs <strong>1 point</strong>; attacking costs <strong>2 points</strong>. Leftover points <strong>carry over</strong> to your next turn. Watch the war-point counter below the turn stamp.', target:'twp-ap-widget' },
+    { title:'MOVE YOUR UNITS',   body:'Click a unit to select it. <strong>Gold squares</strong> show legal moves — click one to march. Each unit can act up to 2 times per turn.', target:'twp-btn-move' },
     { title:'ATTACK ENEMIES',    body:'Switch to <strong>Attack</strong> mode, then click a red-highlighted enemy. Direction matters — rear attacks deal more damage. They counter-strike!', target:'twp-btn-attack' },
-    { title:'END YOUR TURN',     body:'When your units have acted, press <strong>End Turn</strong>. The board rotates — each player always faces upward.', target:'twp-btn-end' },
+    { title:'END YOUR TURN',     body:'When done, press <strong>End Turn</strong>. The board rotates — each player always faces upward. Unused action points are banked for your next turn.', target:'twp-btn-end' },
   ];
   function _showTutorial() {
     var overlay = document.getElementById('twp-tutorial');
     if (!overlay) return;
     _tutStep = 0; _renderTutorialStep(); overlay.style.display = '';
+    var mapRoot = document.getElementById('map-root');
+    if (mapRoot) mapRoot.classList.add('twp-tutorial-on');
   }
   function _renderTutorialStep() {
     var step = TUT_STEPS[_tutStep];
@@ -57,6 +62,8 @@
     var overlay = document.getElementById('twp-tutorial');
     if (overlay) overlay.style.display = 'none';
     document.querySelectorAll('.twp-tutorial-highlight').forEach(function(e){ e.classList.remove('twp-tutorial-highlight'); });
+    var mapRoot = document.getElementById('map-root');
+    if (mapRoot) mapRoot.classList.remove('twp-tutorial-on');
   }
   var STORAGE_BRIEF = 'twp_last_brief';
 
@@ -98,6 +105,13 @@
   /* ── Biome lookup ─────────────────────────────────────────── */
   function _biomeAt(r, c) { return _biomeMap[r + ',' + c] || 'P'; }
 
+  /* ── Action-point helpers ─────────────────────────────────── */
+  function _getAP() { return _currentPlayer === 1 ? _p1ActionPoints : _p2ActionPoints; }
+  function _spendAP(n) {
+    if (_currentPlayer === 1) _p1ActionPoints = Math.max(0, _p1ActionPoints - n);
+    else                      _p2ActionPoints = Math.max(0, _p2ActionPoints - n);
+  }
+
   /* ── Public ─────────────────────────────────────────────── */
   function isActive() { return _active; }
 
@@ -132,6 +146,8 @@
     _boardRot          = 0;
     _log               = [{ kind: 'turn', text: '◆ PLAYER 1 — TURN 1 ◆' }];
     _units             = units;
+    _p1ActionPoints    = 20;
+    _p2ActionPoints    = 0;
 
     document.querySelectorAll('#map-root .unit, #map-root .twp-unit').forEach(function (el) { el.remove(); });
     _unitEls = {};
@@ -359,7 +375,7 @@
     var occ = _units.find(function (u) { return u.row === row && u.col === col; });
 
     if (!_selectedId) {
-      if (occ && occ.player === _currentPlayer && occ.actionsRemaining > 0) _selectedId = occ.id;
+      if (occ && occ.player === _currentPlayer && occ.actionsRemaining > 0 && _getAP() > 0) _selectedId = occ.id;
       _renderAllUnits(); _renderDossier(); return;
     }
 
@@ -371,7 +387,7 @@
       if (_mode === 'rotate') return;
       _selectedId = null; _renderAllUnits(); _renderDossier(); return;
     }
-    if (occ && occ.player === _currentPlayer && occ.actionsRemaining > 0) {
+    if (occ && occ.player === _currentPlayer && occ.actionsRemaining > 0 && _getAP() > 0) {
       _selectedId = occ.id; _renderAllUnits(); _renderDossier(); return;
     }
 
@@ -387,11 +403,11 @@
     }
 
     if (_mode === 'attack' && occ && occ.player !== _currentPlayer) {
-      if (window.Combat.canAttack(sel, occ)) { _doAttack(sel, occ); return; }
+      if (_getAP() >= 2 && window.Combat.canAttack(sel, occ)) { _doAttack(sel, occ); return; }
     }
 
     if (_mode === 'move' && !occ) {
-      if (window.Combat.canMoveTo(sel, row, col, _units, _biomeAt, _gridRows, _gridCols)) {
+      if (_getAP() >= 1 && window.Combat.canMoveTo(sel, row, col, _units, _biomeAt, _gridRows, _gridCols)) {
         _doMove(sel, row, col); return;
       }
     }
@@ -404,6 +420,7 @@
     if (Math.abs(dr) >= Math.abs(dc)) f = dr < 0 ? 'N' : (dr > 0 ? 'S' : f);
     else                              f = dc < 0 ? 'W' : (dc > 0 ? 'E' : f);
     var biomeNames = { P:'PLAIN', F:'FOREST', M:'MOUNTAIN', S:'SWAMP' };
+    _spendAP(1);
     _mutate(unit.id, {
       row: tr, col: tc, facing: f,
       actionsRemaining: Math.max(0, unit.actionsRemaining - 1),
@@ -421,6 +438,7 @@
 
   /* ── Attack ─────────────────────────────────────────────────── */
   function _doAttack(attacker, defender) {
+    _spendAP(2);
     var r = window.Combat.rollAttack(attacker, defender, _units, _biomeAt);
     var newHp = Math.max(0, defender.hp - r.damage);
 
@@ -482,6 +500,9 @@
       return u;
     });
 
+    // Carry over remaining points + grant next player 20 new points
+    if (next === 1) _p1ActionPoints += 20;
+    else            _p2ActionPoints += 20;
     _currentPlayer = next;
     _selectedId    = null;
     _mode          = 'move';
@@ -501,6 +522,8 @@
     _turnNo          = 1;
     _boardRot        = 0;
     _log             = [{ kind:'turn', text: '◆ PLAYER 1 — TURN 1 ◆' }];
+    _p1ActionPoints  = 20;
+    _p2ActionPoints  = 0;
 
     document.querySelectorAll('#map-root .twp-unit').forEach(function (el) { el.remove(); });
     _clearZoneOverlays();
@@ -561,9 +584,18 @@
 
   function _flashBreachCell(row, col) {
     var cellEl = window.MapRenderer.getCellEl(row, col);
-    if (!cellEl) return;
-    cellEl.classList.add('twp-breach-flash');
-    setTimeout(function () { cellEl.classList.remove('twp-breach-flash'); }, 1500);
+    if (cellEl) {
+      cellEl.classList.add('twp-breach-flash');
+      setTimeout(function () { cellEl.classList.remove('twp-breach-flash'); }, 1500);
+    }
+    var mmRoot = document.getElementById('minimap-root');
+    if (mmRoot) {
+      var mmCell = mmRoot.querySelector('.mm-cell[data-row="' + row + '"][data-col="' + col + '"]');
+      if (mmCell) {
+        mmCell.classList.add('twp-mm-breach-flash');
+        setTimeout(function () { mmCell.classList.remove('twp-mm-breach-flash'); }, 1500);
+      }
+    }
   }
 
   function _checkWinner() {
@@ -607,13 +639,14 @@
     if (!_selectedId) return { moveSet: moveSet, attackSet: attackSet };
     var sel = _units.find(function (u) { return u.id === _selectedId; });
     if (!sel || sel.actionsRemaining <= 0) return { moveSet: moveSet, attackSet: attackSet };
-    if (_mode === 'move') {
+    var ap = _getAP();
+    if (_mode === 'move' && ap >= 1) {
       for (var r = 1; r <= _gridRows; r++) {
         for (var c = 1; c <= _gridCols; c++) {
           if (window.Combat.canMoveTo(sel, r, c, _units, _biomeAt, _gridRows, _gridCols)) moveSet[r+','+c] = true;
         }
       }
-    } else if (_mode === 'attack') {
+    } else if (_mode === 'attack' && ap >= 2) {
       _units.forEach(function (t) {
         if (t.player !== sel.player && window.Combat.canAttack(sel, t)) attackSet[t.row+','+t.col] = true;
       });
@@ -691,18 +724,21 @@
       }
     }
 
-    // Place ">" facing indicator in the cell directly ahead of each unit
+    // Place ">" facing indicator inside the unit element (on top of sprite), offset toward facing edge.
+    // Rotation uses _FROT[facing] with NO board-rotation subtraction: the cell is already in the
+    // rotated coordinate frame of #map-root, so +_boardRot is baked in automatically. Subtracting
+    // it again reversed the direction when the board flipped to 180°.
     _units.forEach(function (unit) {
-      var fr = unit.row + (_FDR[unit.facing] || 0);
-      var fc = unit.col + (_FDC[unit.facing] || 0);
-      if (fr < 1 || fr > _gridRows || fc < 1 || fc > _gridCols) return;
-      var fCell = window.MapRenderer.getCellEl(fr, fc);
-      if (!fCell) return;
+      var unitEl = _unitEls[unit.id];
+      if (!unitEl) return;
       var fi = document.createElement('span');
       fi.className = 'twp-fi twp-fi-p' + unit.player;
       fi.textContent = '>';
-      fi.style.transform = 'rotate(' + ((_FROT[unit.facing] || 0) - _boardRot) + 'deg)';
-      fCell.appendChild(fi);
+      var offset = 14;
+      var tx = (_FDC[unit.facing] || 0) * offset;
+      var ty = (_FDR[unit.facing] || 0) * offset;
+      fi.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) rotate(' + (_FROT[unit.facing] || 0) + 'deg)';
+      unitEl.appendChild(fi);
     });
 
     // Rotate the board and compass
@@ -849,7 +885,18 @@
     b('twp-btn-new',    newGame);
     b('twp-btn-move',   function () { _setMode('move'); });
     b('twp-btn-attack', function () { _setMode('attack'); });
-    b('twp-btn-rotate', function () { _setMode('rotate'); });
+    b('twp-btn-rotate', function () {
+      var sel = _selectedId ? _units.find(function (u) { return u.id === _selectedId; }) : null;
+      if (sel && sel.player === _currentPlayer && sel.actionsRemaining > 0) {
+        var order = ['N', 'E', 'S', 'W'];
+        var nextFacing = order[(order.indexOf(sel.facing) + 1) % 4];
+        _mutate(sel.id, { facing: nextFacing });
+        _pushLog({ kind: 'mv', text: SHORT[sel.type] + ' P' + sel.player + ' rotates → ' + nextFacing + '.' });
+        _renderAllUnits(); _renderDossier();
+      } else {
+        _setMode('rotate');
+      }
+    });
 
     // Briefing load
     b('twp-btn-load-brief', function () {
@@ -918,15 +965,35 @@
     var sel2  = _selectedId ? _units.find(function (u) { return u.id === _selectedId; }) : null;
     var noAct = !sel2 || sel2.actionsRemaining <= 0;
     var hasAtk = sel2 && _units.some(function (t) { return t.player !== sel2.player && window.Combat.canAttack(sel2, t); });
-    _btnState('twp-btn-move',   _mode === 'move',   noAct);
-    _btnState('twp-btn-attack', _mode === 'attack', noAct || !hasAtk);
+    var ap = _getAP();
+    _btnState('twp-btn-move',   _mode === 'move',   noAct || ap < 1);
+    _btnState('twp-btn-attack', _mode === 'attack', noAct || !hasAtk || ap < 2);
     _btnState('twp-btn-rotate', _mode === 'rotate', false);
+
+    // AP counter widget
+    var apCountEl = document.getElementById('twp-ap-count');
+    if (apCountEl) {
+      apCountEl.textContent = ap;
+      apCountEl.classList.toggle('twp-ap-low',   ap > 0 && ap <= 5);
+      apCountEl.classList.toggle('twp-ap-empty', ap === 0);
+    }
+    var apWidgetEl = document.getElementById('twp-ap-widget');
+    if (apWidgetEl) {
+      apWidgetEl.classList.toggle('twp-ap-p1', _currentPlayer === 1);
+      apWidgetEl.classList.toggle('twp-ap-p2', _currentPlayer === 2);
+    }
 
     var hintEl = document.getElementById('twp-mode-hint');
     if (hintEl) {
-      if      (_mode === 'move')   hintEl.textContent = 'Cyan = legal moves. Forest/swamp cost +1 move.';
-      else if (_mode === 'attack') hintEl.textContent = hasAtk ? 'Red = enemies in reach. They counter-strike.' : 'No enemies in reach.';
-      else                         hintEl.textContent = 'Click any cell — unit faces that direction (free).';
+      if (ap === 0) {
+        hintEl.textContent = 'No action points — end your turn or rotate (free).';
+      } else if (_mode === 'move') {
+        hintEl.textContent = 'Move: 1 pt · Cyan = legal moves · Forest/swamp cost +1.';
+      } else if (_mode === 'attack') {
+        hintEl.textContent = ap < 2 ? 'Need 2 pts to attack.' : (hasAtk ? 'Attack: 2 pts · Red = in reach · They counter!' : 'No enemies in reach.');
+      } else {
+        hintEl.textContent = 'Rotate: free · Click any cell for new facing direction.';
+      }
     }
 
     // Rotation indicator
