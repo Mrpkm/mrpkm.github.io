@@ -34,9 +34,10 @@
     const unitType = unit.type.toLowerCase();
     const doctrine = state.doctrine.name.toLowerCase();
     const occupied = _buildOccupiedCells(state.units, unitId);
+    const level    = unit.level || 1;
 
     const reachable = window.UnitMovement.computeReachableTiles(
-      grid, state.grid.rows, state.grid.cols, pos, unitType, doctrine, occupied
+      grid, state.grid.rows, state.grid.cols, pos, unitType, doctrine, occupied, level
     );
 
     return Array.from(reachable).map(function(key) {

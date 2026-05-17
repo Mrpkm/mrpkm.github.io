@@ -13,8 +13,6 @@
     Infantry:  '../assets/units/animations/infantry/infantry-attack.gif',
     Motorized: '../assets/units/animations/motorized/motorized-attack.gif',
     Tanks:     '../assets/units/animations/tank/tank-attack.gif',
-    Cavalry:   '../assets/units/animations/cavalry/cavalry-move.gif',
-    Artillery: '../assets/units/animations/artillery/artillery-move.gif',
   };
 
   var FALLBACK = '../assets/game-icons/infantry.png';

@@ -47,15 +47,16 @@
     artillery: { orthoRange: 1, diagRange: 1 },
   };
 
-  function getMoveDef(unitType, doctrine) {
+  function getMoveDef(unitType, doctrine, level) {
+    level = level || 1;
     const base = Object.assign({}, BASE_DEFS[unitType] || BASE_DEFS.infantry);
     if (unitType === 'tanks') {
       // Doctrine overrides (units_and_entities.md §8.3–8.5, game_core.md decisions #27,28,48)
-      if (doctrine === 'blitzkrieg') { base.orthoRange = 4; base.diagRange = 0; }
-      else if (doctrine === 'sf')   { base.orthoRange = 2; base.diagRange = 1; }
-      else                           { base.orthoRange = 2; base.diagRange = 0; } // plain
+      if (doctrine === 'blitzkrieg')         { base.orthoRange = 4; base.diagRange = 0; }
+      else if (doctrine === 'superior firepower') { base.orthoRange = 2; base.diagRange = 1; }
+      else                                    { base.orthoRange = 2; base.diagRange = 0; } // plain
     }
-    // Cavalry level-2 bonus (+2 movement) handled elsewhere (not yet a builder concern)
+    if (unitType === 'cavalry' && level >= 2) { base.cavalryRange += 2; }
     return base;
   }
 
@@ -67,12 +68,13 @@
    * @param {number}      gridW
    * @param {{r,c}}       pos    - unit's current grid cell
    * @param {string}      unitType
-   * @param {string}      doctrine  - 'plain' | 'blitzkrieg' | 'sf'
+   * @param {string}      doctrine  - 'plain' | 'blitzkrieg' | 'superior firepower'
    * @param {Set<string>} occupiedCells - "r,c" keys blocked by other units
+   * @param {number}      [level=1] - unit level (1-based); cavalry gets +2 range at level 2+
    * @returns {Set<string>}
    */
-  function computeReachableTiles(grid, gridH, gridW, pos, unitType, doctrine, occupiedCells) {
-    const def = getMoveDef(unitType, doctrine);
+  function computeReachableTiles(grid, gridH, gridW, pos, unitType, doctrine, occupiedCells, level) {
+    const def = getMoveDef(unitType, doctrine, level);
     const allowed = CAN_ENTER[unitType] || new Set([T_GRASS]);
     const reachable = new Set();
     const { r: sr, c: sc } = pos;
