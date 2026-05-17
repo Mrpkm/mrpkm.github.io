@@ -13,14 +13,14 @@
   var _unsubMinimap = null;
 
   function _showMapView() {
-    deskView.style.display = 'none';
+    if (deskView) deskView.style.display = 'none';
     mapView.classList.add('active');
     if (hintEl) hintEl.classList.add('fade');
   }
 
   function _showDeskView() {
     mapView.classList.remove('active');
-    deskView.style.display = '';
+    if (deskView) deskView.style.display = '';
     if (hintEl) hintEl.classList.remove('fade');
   }
 

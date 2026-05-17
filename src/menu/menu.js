@@ -251,9 +251,9 @@
         <div class="cmd-grid-playable">
           <div class="cmd-card-p primary" id="card-load">
             <span class="ckey">F1</span>
-            <h4>&#9658; Load Briefing</h4>
-            <div class="cdesc">Drop a pre-game code into the field command desk and the map unfolds.</div>
-            <span class="cstat">PASTE &amp; LOAD</span>
+            <h4>&#9658; 2 Player Game</h4>
+            <div class="cdesc">Launch a live two-player battle on the tactical map.</div>
+            <span class="cstat">LAUNCH</span>
           </div>
           <div class="cmd-card-p" id="card-setup-play">
             <span class="ckey">F3</span>
@@ -303,7 +303,7 @@
       `);
 
       document.getElementById('card-load').addEventListener('click', () => {
-        window.location.href = '../../core-map/index.html';
+        window.location.href = '../tools/pregame-setup.html';
       });
       document.getElementById('card-setup-play').addEventListener('click', () => {
         window.location.href = '../tools/pregame-setup.html';
