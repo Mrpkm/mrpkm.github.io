@@ -622,6 +622,10 @@
       if (_getAP() >= 2 && window.Combat.canAttack(sel, occ)) { _doAttack(sel, occ); return; }
     }
 
+    if (_mode === 'move' && occ && occ.player !== _currentPlayer) {
+      if (_getAP() >= 2 && window.Combat.canAttack(sel, occ)) { _doAttack(sel, occ); return; }
+    }
+
     if (_mode === 'move' && !occ) {
       if (_getAP() >= 1 && window.Combat.canMoveTo(sel, row, col, _units, _biomeAt, _gridRows, _gridCols)) {
         _doMove(sel, row, col); return;
@@ -750,7 +754,6 @@
 
     var wrap = document.createElement('div');
     wrap.className = 'dmg-pop-wrap';
-    wrap.style.transform = 'rotate(' + (-_boardRot) + 'deg)';
     var pop = document.createElement('div');
     pop.className = 'dmg-pop' + (kind === 'counter' ? ' counter' : '');
     pop.textContent = '−' + damage;
@@ -1043,7 +1046,7 @@
 
       // Use classList instead of className= to avoid resetting CSS animations
       var wantSelected  = unit.id === _selectedId;
-      var wantExhausted = unit.actionsRemaining <= 0;
+      var wantExhausted = unit.player === _currentPlayer && unit.actionsRemaining <= 0;
       var wantLowHp     = unit.hp <= Math.ceil(unit.maxHp / 2) && unit.hp < unit.maxHp;
       el.classList.toggle('selected',  wantSelected);
       el.classList.toggle('exhausted', wantExhausted);
@@ -1057,7 +1060,7 @@
 
       // Counter-rotate the inner wrapper
       var inner = el.querySelector('.unit-inner');
-      if (inner) inner.style.transform = 'rotate(' + (-_boardRot) + 'deg)';
+      if (inner) inner.style.transform = '';
 
       // AP tag: show for own units with actions, hide when selected or exhausted
       var apTag = el.querySelector('.unit-ap-tag');
@@ -1097,14 +1100,19 @@
         unitEl.appendChild(fi);
       }
       var offset = 16;
-      var tx = (_FDC[unit.facing] || 0) * offset;
-      var ty = (_FDR[unit.facing] || 0) * offset;
-      fi.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) rotate(' + (_FROT[unit.facing] || 0) + 'deg)';
+      var flip = _boardRot === 180 ? -1 : 1;
+      var tx = flip * (_FDC[unit.facing] || 0) * offset;
+      var ty = flip * (_FDR[unit.facing] || 0) * offset;
+      fi.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) rotate(' + ((_FROT[unit.facing] || 0) + _boardRot) + 'deg)';
     });
 
     // Rotate the board and compass
     var mapRoot = document.getElementById('map-root');
-    if (mapRoot) mapRoot.style.transform = 'rotate(' + _boardRot + 'deg)';
+    if (mapRoot) {
+      mapRoot.style.transform = 'rotate(' + _boardRot + 'deg)';
+      var cellRot = _boardRot ? 'rotate(' + (-_boardRot) + 'deg)' : '';
+      mapRoot.querySelectorAll('.cell').forEach(function (cell) { cell.style.transform = cellRot; });
+    }
     var compass = document.querySelector('.field-map .compass');
     if (compass) compass.style.transform = 'rotate(' + _boardRot + 'deg)';
 

@@ -46,7 +46,6 @@
 
   window.Selection.attachSelection(mapRootEl);
   window.Input.attachInput();
-  if (window.AIAgentsBridge) window.AIAgentsBridge.connect();
 
   var btnClear = document.getElementById('btn-clear');
   if (btnClear) {
