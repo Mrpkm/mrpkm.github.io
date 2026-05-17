@@ -26,48 +26,246 @@
   var _panelWired    = false;
   var _flashTimeout  = null;
   var _endOverlayShown = false;
-  var _tutStep            = -1;
-  var _p1ActionPoints     = 20;   // action-point pool; P2 starts at 0, gains 20 when P1 ends first turn
-  var _p2ActionPoints     = 0;
+  var _tutStep        = -1;
+  var _tutListeners   = [];
+  var _tutDoneOk      = false;
+  var _tutPosTimer    = null;
+  var _tutUnsub       = null;
+  var _p1ActionPoints = 20;
+  var _p2ActionPoints = 0;
 
   var SHORT = { Infantry:'INF', Cavalry:'CAV', Tanks:'TNK', Motorized:'MOT', Artillery:'ART' };
 
-  /* ── Tutorial ────────────────────────────────────────────────── */
+  /* ── Tutorial event bus ──────────────────────────────────────── */
+  function _tutEmit(evt) {
+    _tutListeners.slice().forEach(function(fn) { try { fn(evt); } catch(e) {} });
+  }
+
+  /* ── Tutorial steps ──────────────────────────────────────────── */
   var TUT_STEPS = [
-    { title:'ACTION POINTS',     body:'You start each turn with <strong>20 action points</strong>. Moving costs <strong>1 point</strong>; attacking costs <strong>2 points</strong>. Leftover points <strong>carry over</strong> to your next turn. Watch the war-point counter below the turn stamp.', target:'twp-ap-widget' },
-    { title:'MOVE YOUR UNITS',   body:'Click a unit to select it. <strong>Gold squares</strong> show legal moves — click one to march. Each unit can act up to 2 times per turn.', target:'twp-btn-move' },
-    { title:'ATTACK ENEMIES',    body:'Switch to <strong>Attack</strong> mode, then click a red-highlighted enemy. Direction matters — rear attacks deal more damage. They counter-strike!', target:'twp-btn-attack' },
-    { title:'END YOUR TURN',     body:'When done, press <strong>End Turn</strong>. The board rotates — each player always faces upward. Unused action points are banked for your next turn.', target:'twp-btn-end' },
-    { title:'ENTRENCHMENT',      body:'<strong>Infantry and Cavalry</strong> that stay still for <strong>3 turns</strong> automatically dig a trench — gaining +2 / +1.5 defense. A <img src="../assets/game-icons/trench.png" style="width:14px;height:14px;vertical-align:middle;image-rendering:pixelated;"> icon appears on the unit. Hold <strong>6 turns</strong> for a permanent trench (+1 def). Leaving after 4+ turns keeps the trench on the cell for others to use.', target:'twp-btn-end' },
-    { title:'FORMATION',         body:'In <strong>Move</strong> mode, move a light unit (Infantry or Cavalry) onto a <strong>friendly light unit</strong> to stack them in formation. They gain <strong>combined defense</strong> and ignore double-attacks — but <strong>cannot move or counter-attack</strong>. A <img src="../assets/game-icons/formation.png" style="width:14px;height:14px;vertical-align:middle;image-rendering:pixelated;"> icon marks the pair. When one dies, the other moves freely again.', target:'twp-btn-move' },
+    { id:'intro', kind:'modal',
+      title:'Welcome, Commander.',
+      body:'Your army is in <strong>blue</strong>, the enemy in <strong>red</strong>. Reach the enemy back row, or eliminate their force, to win.<br><br>This quick walkthrough shows you the controls.',
+      prompt:'Click NEXT when ready.',
+    },
+    { id:'ap', kind:'read', target:'#twp-ap-widget',
+      title:'01 · Action Points',
+      body:'You spend <strong>Action Points</strong> to act. <strong>Move&nbsp;= 1&nbsp;AP</strong>, <strong>Attack&nbsp;= 2&nbsp;AP</strong>, <strong>Rotate&nbsp;= free</strong>. You start with <strong>20&nbsp;AP</strong> — unspent points <strong>carry over</strong> next turn.',
+      prompt:'Read the widget, then click NEXT.',
+    },
+    { id:'select', kind:'do', target:'.twp-unit.twp-p1',
+      title:'02 · Select a Unit',
+      body:'Click one of your <strong>blue-framed</strong> units on the map. Each unit can act up to <strong>2 times per turn</strong>. Gold squares show where it can move.',
+      prompt:'Click any blue unit on the map.',
+      expect:'unit-selected',
+    },
+    { id:'move', kind:'do', target:'.cell.legal-move',
+      title:'03 · Move',
+      body:'<strong>Gold squares</strong> show every legal move. Click one to advance. Forest and mountains cost extra movement.',
+      prompt:'Click a gold square to move your unit.',
+      expect:'unit-moved',
+    },
+    { id:'attack-mode', kind:'do', target:'#twp-btn-attack',
+      title:'04 · Attack Mode',
+      body:'Switch to <strong>Attack</strong> mode — click the button or press <strong>A</strong>. Enemies within reach glow red.',
+      prompt:'Click the ATTACK button (or press A).',
+      expect:'mode-attack',
+    },
+    { id:'strike', kind:'do', target:null,
+      title:'05 · Strike',
+      body:'Red-highlighted cells are valid targets. <strong>Rear attacks</strong> deal more damage — facing matters. Costs <strong>2&nbsp;AP</strong>. Watch for the damage number and counter-strike!',
+      prompt:'Click a red-highlighted enemy. (Click NEXT to skip if none in range.)',
+      expect:'attack-resolved', allowSkip:true,
+    },
+    { id:'effects', kind:'read', target:'#twp-selection-info',
+      title:'06 · Unit Effects',
+      body:'<strong>Infantry &amp; Cavalry</strong> that hold position for 3&nbsp;turns dig a <strong>trench</strong> (+DEF). Move a light unit onto a friendly to enter <strong>formation</strong> (combined DEF). Active effects appear in the Selected Unit card.',
+      prompt:'Read, then click NEXT.',
+    },
+    { id:'end', kind:'do', target:'#twp-btn-end',
+      title:'07 · End Your Turn',
+      body:'When done, press <strong>End Turn</strong>. The board <strong>rotates 180°</strong> — each player always faces forward. Unused AP banks for later.',
+      prompt:'Click END TURN (or press SPACE).',
+      expect:'turn-ended',
+    },
+    { id:'done', kind:'modal',
+      title:'You have the conn, Commander.',
+      body:'Two ways to win:<br>&nbsp;&nbsp;<strong>▸</strong> Eliminate every enemy unit.<br>&nbsp;&nbsp;<strong>▸</strong> Move any unit into the enemy back row.<br><br>Good luck out there.',
+      prompt:'Close to begin the battle.',
+      finalLabel:'BEGIN BATTLE ✓',
+    },
   ];
+
+  /* ── Tutorial display ────────────────────────────────────────── */
   function _showTutorial() {
     var overlay = document.getElementById('twp-tutorial');
     if (!overlay) return;
-    _tutStep = 0; _renderTutorialStep(); overlay.style.display = '';
-    var mapRoot = document.getElementById('map-root');
-    if (mapRoot) mapRoot.classList.add('twp-tutorial-on');
+    _tutStep = 0; _tutDoneOk = false; _tutListeners = [];
+    overlay.style.display = '';
+    document.getElementById('map-root') && document.getElementById('map-root').classList.add('twp-tutorial-on');
+    _renderTutorialStep();
   }
+
   function _renderTutorialStep() {
-    var step = TUT_STEPS[_tutStep];
-    if (!step) { _closeTutorial(); return; }
-    var el = function(id){ return document.getElementById(id); };
-    if (el('twp-tutorial-kicker')) el('twp-tutorial-kicker').textContent = 'STEP '+(_tutStep+1)+' OF '+TUT_STEPS.length;
-    if (el('twp-tutorial-title'))  el('twp-tutorial-title').textContent  = step.title;
-    if (el('twp-tutorial-body'))   el('twp-tutorial-body').innerHTML     = step.body;
-    if (el('twp-tutorial-next'))   el('twp-tutorial-next').textContent   = _tutStep < TUT_STEPS.length-1 ? 'NEXT ▸' : 'GOT IT ✓';
-    document.querySelectorAll('.twp-tutorial-highlight').forEach(function(e){ e.classList.remove('twp-tutorial-highlight'); });
-    if (step.target) { var t = el(step.target); if (t) t.classList.add('twp-tutorial-highlight'); }
+    if (_tutUnsub)   { _tutUnsub(); _tutUnsub = null; }
+    if (_tutPosTimer){ clearInterval(_tutPosTimer); _tutPosTimer = null; }
+    _tutDoneOk = false;
+
+    var step    = TUT_STEPS[_tutStep];
+    if (!step)  { _closeTutorial(); return; }
+    var isFinal = _tutStep === TUT_STEPS.length - 1;
+    var $ = function(id) { return document.getElementById(id); };
+
+    if ($('twp-tutorial-kicker'))
+      $('twp-tutorial-kicker').textContent = (step.kind === 'modal') ? 'FIELD ORIENTATION' : 'STEP ' + _tutStep + ' OF ' + (TUT_STEPS.length - 2);
+    if ($('twp-tutorial-title')) $('twp-tutorial-title').textContent = step.title;
+    if ($('twp-tutorial-body'))  $('twp-tutorial-body').innerHTML   = step.body;
+
+    var promptEl = $('twp-tutorial-prompt');
+    if (promptEl) {
+      promptEl.innerHTML     = step.prompt || '';
+      promptEl.style.display = step.prompt ? '' : 'none';
+      promptEl.className     = 'twp-tutorial-prompt';
+    }
+
+    var nextBtn = $('twp-tutorial-next');
+    if (nextBtn) {
+      nextBtn.disabled    = false;
+      nextBtn.textContent = isFinal ? (step.finalLabel || 'GOT IT ✓') : 'NEXT ▸';
+      nextBtn.onclick     = function() { if (isFinal) _closeTutorial(); else _nextTutorialStep(); };
+    }
+    var skipBtn = $('twp-tutorial-skip');
+    if (skipBtn) { skipBtn.textContent = isFinal ? 'CLOSE' : 'SKIP TUTORIAL'; skipBtn.onclick = _closeTutorial; }
+
+    _tutUpdateProgress();
+    _tutPositionCard(step);
+
+    /* backdrop: do-steps must pass clicks through to the map */
+    var backdrop = $('twp-tutorial-backdrop');
+    if (backdrop) {
+      backdrop.style.background   = 'transparent';
+      backdrop.style.pointerEvents = step.kind === 'do' ? 'none' : 'auto';
+    }
+
+    /* action gating for 'do' steps */
+    if (step.kind === 'do' && step.expect) {
+      var gateEvt = step.expect;
+      var gateFn  = function(evt) {
+        if (evt !== gateEvt) return;
+        _tutDoneOk = true;
+        if (promptEl) promptEl.className = 'twp-tutorial-prompt complete';
+        setTimeout(function() {
+          if (_tutStep >= 0 && TUT_STEPS[_tutStep] && TUT_STEPS[_tutStep].expect === gateEvt)
+            _nextTutorialStep();
+        }, 700);
+      };
+      _tutListeners.push(gateFn);
+      _tutUnsub = function() {
+        _tutListeners = _tutListeners.filter(function(f) { return f !== gateFn; });
+      };
+    }
+
+    /* reposition every ~400 ms (handles board rotation / layout shift) */
+    _tutPosTimer = setInterval(function() {
+      if (_tutStep >= 0 && TUT_STEPS[_tutStep]) _tutPositionCard(TUT_STEPS[_tutStep]);
+    }, 400);
   }
-  function _nextTutorialStep() { _tutStep++; if (_tutStep >= TUT_STEPS.length){ _closeTutorial(); return; } _renderTutorialStep(); }
+
+  function _tutPositionCard(step) {
+    var card = document.getElementById('twp-tutorial-card');
+    if (!card) return;
+
+    var targetEl = null;
+    if (step && step.target) {
+      try { targetEl = document.querySelector(step.target); } catch(e) {}
+    }
+
+    _tutDrawSpotlight(targetEl);
+
+    if (!targetEl || step.kind === 'modal') {
+      card.className  = 'tut-center';
+      card.style.top  = '';
+      card.style.left = '';
+      return;
+    }
+
+    card.className = '';
+    var rect  = targetEl.getBoundingClientRect();
+    var cardW = 340, cardH = card.offsetHeight || 300, gap = 22;
+    var sp    = {
+      right:  window.innerWidth  - rect.right  - gap,
+      left:   rect.left          - gap,
+      bottom: window.innerHeight - rect.bottom - gap,
+      top:    rect.top           - gap,
+    };
+
+    var side = 'right';
+    if      (sp.right  >= cardW + 10) side = 'right';
+    else if (sp.left   >= cardW + 10) side = 'left';
+    else if (sp.bottom >= cardH + 10) side = 'bottom';
+    else                              side = 'top';
+
+    var l, t;
+    if (side === 'right')  { l = rect.right + gap; t = Math.max(12, Math.min(window.innerHeight - cardH - 12, rect.top + rect.height/2 - cardH/2)); }
+    else if (side === 'left')   { l = rect.left - cardW - gap; t = Math.max(12, Math.min(window.innerHeight - cardH - 12, rect.top + rect.height/2 - cardH/2)); }
+    else if (side === 'bottom') { l = Math.max(12, Math.min(window.innerWidth - cardW - 12, rect.left + rect.width/2 - cardW/2)); t = rect.bottom + gap; }
+    else                        { l = Math.max(12, Math.min(window.innerWidth - cardW - 12, rect.left + rect.width/2 - cardW/2)); t = rect.top - cardH - gap; }
+
+    card.style.left = l + 'px';
+    card.style.top  = t + 'px';
+  }
+
+  function _tutDrawSpotlight(targetEl) {
+    var svg = document.getElementById('twp-tutorial-mask');
+    if (!svg) return;
+    if (!targetEl) {
+      svg.innerHTML = '<rect x="0" y="0" width="100%" height="100%" fill="rgba(5,4,2,0.62)"/>';
+      return;
+    }
+    var r = targetEl.getBoundingClientRect(), p = 8;
+    var x = r.left - p, y = r.top - p, w = r.width + p*2, h = r.height + p*2;
+    svg.innerHTML =
+      '<defs><mask id="tut-hole">' +
+        '<rect x="0" y="0" width="100%" height="100%" fill="white"/>' +
+        '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="4" fill="black"/>' +
+      '</mask></defs>' +
+      '<rect x="0" y="0" width="100%" height="100%" fill="rgba(5,4,2,0.68)" mask="url(#tut-hole)"/>' +
+      '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="4" fill="none" stroke="#ffd34a" stroke-width="2.5">' +
+        '<animate attributeName="stroke-opacity" values="0.6;1;0.6" dur="1.4s" repeatCount="indefinite"/>' +
+      '</rect>';
+  }
+
+  function _tutUpdateProgress() {
+    var prog = document.getElementById('twp-tutorial-progress');
+    if (!prog) return;
+    prog.innerHTML = '';
+    for (var i = 0; i < TUT_STEPS.length; i++) {
+      var dot = document.createElement('span');
+      dot.className = 'tut-dot' + (i < _tutStep ? ' done' : i === _tutStep ? ' active' : '');
+      prog.appendChild(dot);
+    }
+  }
+
+  function _nextTutorialStep() {
+    if (_tutUnsub)   { _tutUnsub(); _tutUnsub = null; }
+    if (_tutPosTimer){ clearInterval(_tutPosTimer); _tutPosTimer = null; }
+    _tutStep++;
+    if (_tutStep >= TUT_STEPS.length) { _closeTutorial(); return; }
+    _renderTutorialStep();
+  }
+
   function _closeTutorial() {
-    _tutStep = -1;
+    if (_tutUnsub)   { _tutUnsub(); _tutUnsub = null; }
+    if (_tutPosTimer){ clearInterval(_tutPosTimer); _tutPosTimer = null; }
+    _tutListeners = []; _tutStep = -1; _tutDoneOk = false;
     var overlay = document.getElementById('twp-tutorial');
     if (overlay) overlay.style.display = 'none';
-    document.querySelectorAll('.twp-tutorial-highlight').forEach(function(e){ e.classList.remove('twp-tutorial-highlight'); });
+    var svg = document.getElementById('twp-tutorial-mask');
+    if (svg) svg.innerHTML = '';
     var mapRoot = document.getElementById('map-root');
     if (mapRoot) mapRoot.classList.remove('twp-tutorial-on');
   }
+
   var STORAGE_BRIEF = 'twp_last_brief';
 
   /* ── Initial unit layout (12×11, 1-indexed) ─────────────── */
@@ -385,7 +583,10 @@
     var occ = _units.find(function (u) { return u.row === row && u.col === col; });
 
     if (!_selectedId) {
-      if (occ && occ.player === _currentPlayer && occ.actionsRemaining > 0 && _getAP() > 0) _selectedId = occ.id;
+      if (occ && occ.player === _currentPlayer && occ.actionsRemaining > 0 && _getAP() > 0) {
+        _selectedId = occ.id;
+        _tutEmit('unit-selected');
+      }
       _renderAllUnits(); _renderDossier(); return;
     }
 
@@ -534,6 +735,31 @@
     _checkEndReached();
     _applyConquest(unit.player, tr, tc);
     _renderAllUnits(); _renderDossier();
+    _tutEmit('unit-moved');
+  }
+
+  /* ── Attack effect (damage pop + impact mark + shake) ────────── */
+  function _showAttackEffect(row, col, damage, kind) {
+    var cellEl = window.MapRenderer.getCellEl(row, col);
+    if (!cellEl) return;
+
+    var mark = document.createElement('div');
+    mark.className = 'impact-mark';
+    cellEl.appendChild(mark);
+    setTimeout(function() { if (mark.parentNode) mark.remove(); }, 900);
+
+    var wrap = document.createElement('div');
+    wrap.className = 'dmg-pop-wrap';
+    wrap.style.transform = 'rotate(' + (-_boardRot) + 'deg)';
+    var pop = document.createElement('div');
+    pop.className = 'dmg-pop' + (kind === 'counter' ? ' counter' : '');
+    pop.textContent = '−' + damage;
+    wrap.appendChild(pop);
+    cellEl.appendChild(wrap);
+    setTimeout(function() { if (wrap.parentNode) wrap.remove(); }, 1300);
+
+    cellEl.classList.add('attack-shake');
+    setTimeout(function() { cellEl.classList.remove('attack-shake'); }, 500);
   }
 
   /* ── Attack ─────────────────────────────────────────────────── */
@@ -552,6 +778,7 @@
     _mutate(defender.id, { hp: newHp });
     if (newHp <= 0) _removeUnit(defender.id);
     _flashCell(defender.row, defender.col);
+    _showAttackEffect(defender.row, defender.col, r.damage, 'hit');
 
     var defAlive = _units.find(function (u) { return u.id === defender.id; });
     var atkAlive = _units.find(function (u) { return u.id === attacker.id; });
@@ -569,6 +796,7 @@
       _mutate(atkAlive.id, { hp: cHp });
       if (cHp <= 0) { _removeUnit(atkAlive.id); _selectedId = null; }
       _flashCell(atkAlive.row, atkAlive.col);
+      if (cr.damage > 0) _showAttackEffect(atkAlive.row, atkAlive.col, cr.damage, 'counter');
     }
 
     var postAtk = _units.find(function (u) { return u.id === attacker.id; });
@@ -576,6 +804,7 @@
 
     _checkWinner();
     _renderAllUnits(); _renderDossier();
+    _tutEmit('attack-resolved');
   }
 
   function _detail(atk, def, r, newHp) {
@@ -625,6 +854,7 @@
     _boardRot      = (_boardRot + 180) % 360;
     _pushLog({ kind:'turn', text: '◆ PLAYER '+next+' — TURN '+_turnNo+' ◆' });
     _renderAllUnits(); _renderDossier();
+    _tutEmit('turn-ended');
   }
 
   /* ── New Game (preserves brief if one was loaded) ──────────── */
@@ -747,11 +977,11 @@
   function _flashCell(row, col) {
     var cellEl = window.MapRenderer.getCellEl(row, col);
     if (!cellEl) return;
-    cellEl.classList.add('attack-target');
+    cellEl.classList.add('attack-target', 'attack-flash');
     clearTimeout(_flashTimeout);
     _flashTimeout = setTimeout(function () {
-      if (_active) cellEl.classList.remove('attack-target');
-    }, 700);
+      if (_active) { cellEl.classList.remove('attack-target'); cellEl.classList.remove('attack-flash'); }
+    }, 900);
   }
 
   /* ── Compute move / attack hints ─────────────────────────────── */
@@ -786,9 +1016,9 @@
 
     // Clear cell highlights and old facing indicators
     document.querySelectorAll('#map-root .cell').forEach(function (el) {
-      el.classList.remove('legal-move', 'attack-target', 'twp-selected-cell');
+      el.classList.remove('legal-move', 'attack-target', 'sel-cell');
     });
-    document.querySelectorAll('#map-root .twp-fi').forEach(function (el) { el.remove(); });
+    document.querySelectorAll('#map-root .unit-facing').forEach(function (el) { el.remove(); });
     Object.keys(hints.moveSet).forEach(function (key) {
       var p = key.split(',');
       var c = window.MapRenderer.getCellEl(+p[0], +p[1]);
@@ -814,19 +1044,28 @@
       // Use classList instead of className= to avoid resetting CSS animations
       var wantSelected  = unit.id === _selectedId;
       var wantExhausted = unit.actionsRemaining <= 0;
-      el.classList.toggle('twp-selected',  wantSelected);
-      el.classList.toggle('twp-exhausted', wantExhausted);
+      var wantLowHp     = unit.hp <= Math.ceil(unit.maxHp / 2) && unit.hp < unit.maxHp;
+      el.classList.toggle('selected',  wantSelected);
+      el.classList.toggle('exhausted', wantExhausted);
+      el.classList.toggle('low-hp',    wantLowHp);
 
       // Force animation start on new elements (handles GIF delay)
       if (isNew) {
         el.style.animationPlayState = 'running';
-        // Trigger reflow so animation starts from frame 0 consistently
         void el.offsetWidth;
       }
 
       // Counter-rotate the inner wrapper
-      var inner = el.querySelector('.twp-inner');
+      var inner = el.querySelector('.unit-inner');
       if (inner) inner.style.transform = 'rotate(' + (-_boardRot) + 'deg)';
+
+      // AP tag: show for own units with actions, hide when selected or exhausted
+      var apTag = el.querySelector('.unit-ap-tag');
+      if (apTag) {
+        var showTag = unit.player === _currentPlayer && !wantSelected && !wantExhausted;
+        apTag.style.display = showTag ? '' : 'none';
+        apTag.textContent = unit.actionsRemaining + '/2';
+      }
 
       _updateHpPips(el, unit);
       _updateStatusIcons(el, unit);
@@ -842,25 +1081,25 @@
       var su = _units.find(function (u) { return u.id === _selectedId; });
       if (su) {
         var sc = window.MapRenderer.getCellEl(su.row, su.col);
-        if (sc) sc.classList.add('twp-selected-cell');
+        if (sc) sc.classList.add('sel-cell');
       }
     }
 
-    // Place ">" facing indicator inside the unit element (on top of sprite), offset toward facing edge.
-    // Rotation uses _FROT[facing] with NO board-rotation subtraction: the cell is already in the
-    // rotated coordinate frame of #map-root, so +_boardRot is baked in automatically. Subtracting
-    // it again reversed the direction when the board flipped to 180°.
+    // Place ">" facing chevron on each unit (outside .unit-inner so board-rotation bakes in)
     _units.forEach(function (unit) {
       var unitEl = _unitEls[unit.id];
       if (!unitEl) return;
-      var fi = document.createElement('span');
-      fi.className = 'twp-fi twp-fi-p' + unit.player;
-      fi.textContent = '>';
-      var offset = 14;
+      var fi = unitEl.querySelector('.unit-facing');
+      if (!fi) {
+        fi = document.createElement('span');
+        fi.className = 'unit-facing facing-p' + unit.player;
+        fi.textContent = '>';
+        unitEl.appendChild(fi);
+      }
+      var offset = 16;
       var tx = (_FDC[unit.facing] || 0) * offset;
       var ty = (_FDR[unit.facing] || 0) * offset;
       fi.style.transform = 'translate(' + tx + 'px, ' + ty + 'px) rotate(' + (_FROT[unit.facing] || 0) + 'deg)';
-      unitEl.appendChild(fi);
     });
 
     // Rotate the board and compass
@@ -923,7 +1162,7 @@
     Object.keys(UNIT_SPRITE).forEach(function(type) {
       _chromaKey(UNIT_SPRITE[type]).then(function(dataUrl) {
         _cachedSprites[type] = dataUrl;
-        document.querySelectorAll('.twp-unit[data-unit-type="' + type + '"] .twp-inner img').forEach(function(img) {
+        document.querySelectorAll('.twp-unit[data-unit-type="' + type + '"] .unit-inner img.unit-sprite').forEach(function(img) {
           img.src = dataUrl;
         });
       });
@@ -937,67 +1176,78 @@
     el.dataset.unitType = unit.type;
     el.dataset.player   = unit.player;
 
-    // Inner wrapper handles counter-rotation independently of bob animation
+    /* inner wrapper — counter-rotates independently of the bob animation */
     var inner = document.createElement('div');
-    inner.className = 'twp-inner';
+    inner.className = 'unit-inner';
 
     var img = document.createElement('img');
+    img.className = 'unit-sprite';
     img.src = _cachedSprites[unit.type] || UNIT_SPRITE[unit.type] || UNIT_SPRITE.Infantry;
     img.alt = unit.type;
-    img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;image-rendering:pixelated;pointer-events:none;filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55));';
+    img.draggable = false;
     inner.appendChild(img);
 
-    // HP pip bar
+    /* HP pip bar */
     var hpBar = document.createElement('div');
-    hpBar.className = 'twp-hp';
+    hpBar.className = 'unit-hp';
     for (var i = 0; i < unit.maxHp; i++) {
-      var pip = document.createElement('span');
-      pip.className = 'twp-pip' + (i >= unit.hp ? ' twp-pip-lost' : '');
+      var pip = document.createElement('div');
+      pip.className = 'hp-pip' + (i >= unit.hp ? ' lost' : '');
       hpBar.appendChild(pip);
     }
     inner.appendChild(hpBar);
 
-    // Status icons (trench + formation) — hidden until toggled by _updateStatusIcons
-    var trenchIconEl = document.createElement('img');
-    trenchIconEl.className = 'twp-status-icon twp-trench-icon';
-    trenchIconEl.src = '../assets/game-icons/trench.png';
-    trenchIconEl.alt = 'TRENCH';
-    trenchIconEl.style.display = 'none';
-    inner.appendChild(trenchIconEl);
+    /* AP remaining tag — hidden when selected or no actions */
+    var apTag = document.createElement('span');
+    apTag.className = 'unit-ap-tag';
+    apTag.textContent = unit.actionsRemaining + '/2';
+    apTag.style.display = 'none';
+    inner.appendChild(apTag);
 
-    var formIconEl = document.createElement('img');
-    formIconEl.className = 'twp-status-icon twp-form-icon';
-    formIconEl.src = '../assets/game-icons/formation.png';
-    formIconEl.alt = 'FORM';
-    formIconEl.style.display = 'none';
-    inner.appendChild(formIconEl);
+    /* Effect badges container (trench · formation) */
+    var effBox = document.createElement('div');
+    effBox.className = 'unit-effects';
+    inner.appendChild(effBox);
 
     el.appendChild(inner);
+
+    /* Facing chevron — outside inner so board-rotation bakes in automatically */
+    var fi = document.createElement('span');
+    fi.className = 'unit-facing facing-p' + unit.player;
+    fi.textContent = '>';
+    el.appendChild(fi);
+
     return el;
   }
 
   function _updateStatusIcons(el, unit) {
-    var trenchIcon = el.querySelector('.twp-trench-icon');
-    var formIcon   = el.querySelector('.twp-form-icon');
-    if (trenchIcon) {
-      var show = !!unit.trenched;
-      trenchIcon.style.display = show ? '' : 'none';
-      if (show) {
-        trenchIcon.title   = unit.trenched === 'perm' ? 'Permanent Trench (+1 def)' : 'Entrenched (Inf +2 / Cav +1.5 def)';
-        trenchIcon.style.opacity = unit.trenched === 'perm' ? '0.65' : '1';
-      }
+    var effBox = el.querySelector('.unit-effects');
+    if (!effBox) return;
+    effBox.innerHTML = '';
+    if (unit.trenched) {
+      var tb = document.createElement('div');
+      tb.className = 'effect-badge eb-trench' + (unit.trenched === 'perm' ? ' eb-perm' : '');
+      tb.title = unit.trenched === 'perm' ? 'Permanent Trench (+1 def)' : 'Entrenched (Inf +2 / Cav +1.5 def)';
+      var ti = document.createElement('img');
+      ti.src = '../assets/game-icons/trench.png'; ti.alt = 'TRENCH';
+      tb.appendChild(ti); effBox.appendChild(tb);
     }
-    if (formIcon) {
-      formIcon.style.display = unit.formationPartnerId ? '' : 'none';
-      if (unit.formationPartnerId) formIcon.title = 'In Formation (combined def, no move, no counter)';
+    if (unit.formationPartnerId) {
+      var fb = document.createElement('div');
+      fb.className = 'effect-badge eb-formation';
+      fb.title = 'Formation — combined DEF, no move, no counter';
+      var fi2 = document.createElement('img');
+      fi2.src = '../assets/game-icons/formation.png'; fi2.alt = 'FORM';
+      fb.appendChild(fi2); effBox.appendChild(fb);
     }
   }
 
   function _updateHpPips(el, unit) {
-    var hpBar = el.querySelector('.twp-hp');
+    var hpBar = el.querySelector('.unit-hp');
     if (!hpBar) return;
-    hpBar.querySelectorAll('.twp-pip, .twp-pip-lost').forEach(function (pip, i) {
-      pip.className = 'twp-pip' + (i >= unit.hp ? ' twp-pip-lost' : '');
+    var pips = hpBar.querySelectorAll('.hp-pip');
+    pips.forEach(function (pip, i) {
+      pip.className = 'hp-pip' + (i >= unit.hp ? ' lost' : '');
     });
   }
 
@@ -1076,6 +1326,7 @@
   function _setMode(m) {
     _mode = m;
     _renderAllUnits(); _renderDossier();
+    _tutEmit('mode-' + m);
   }
 
   /* ── Dossier render ────────────────────────────────────────── */
@@ -1092,28 +1343,87 @@
       actEl.textContent = n + ' unit' + (n !== 1 ? 's' : '') + ' with actions';
     }
 
-    // Selection info
+    // Selection info — rich sel-card
     var infoEl = document.getElementById('twp-selection-info');
     if (infoEl) {
       var sel = _selectedId ? _units.find(function (u) { return u.id === _selectedId; }) : null;
       if (!sel) {
-        infoEl.innerHTML = '<span style="color:var(--olive);font-style:italic;font-size:12px;">Click one of your tokens.</span>';
+        infoEl.innerHTML = '<div class="sel-card"><div class="sel-empty">No unit selected.<br>Click a token on the map.</div></div>';
       } else {
-        var defEff = window.Combat.effectiveDefense(sel, _biomeAt, _units);
-        var stats  = window.Combat.UNIT_STATS[sel.type];
-        var trenchLabel = sel.trenched === 'perm' ? 'PERM TRENCH' : (sel.trenched ? 'TRENCHED' : '');
+        var defEff  = window.Combat.effectiveDefense(sel, _biomeAt, _units);
+        var stats   = window.Combat.UNIT_STATS[sel.type];
+        var biome   = _biomeAt(sel.row, sel.col);
+        var bLabel  = { P:'PLAIN', F:'FOREST', M:'MOUNTAIN', S:'SWAMP' }[biome] || 'PLAIN';
+        var terrDef = (window.Combat.TERRAIN_DEF && window.Combat.TERRAIN_DEF[biome] && window.Combat.TERRAIN_DEF[biome][sel.type]) || 0;
+        var ranks   = ['','PRIVATE','CORPORAL','CAPTAIN','COLONEL'];
+        var lvl     = sel.level || 1;
+        var rank    = ranks[lvl] || 'PRIVATE';
+        var lowHp   = sel.hp <= Math.ceil(sel.maxHp / 2);
+
+        var pipsHtml = '';
+        for (var pi = 0; pi < sel.maxHp; pi++) {
+          pipsHtml += '<div class="pip' + (pi >= sel.hp ? ' lost' : '') + '"></div>';
+        }
+
+        var effs = [];
+        if (sel.trenched) {
+          var isPerm = sel.trenched === 'perm';
+          var tDef   = isPerm ? 1 : (stats.trench ? (sel.type === 'Infantry' ? 2 : 1.5) : 0);
+          effs.push('<div class="eff-row active-trench">' +
+            '<div class="eff-icon"><img src="../assets/game-icons/trench.png" alt="trench"></div>' +
+            '<div><div class="eff-name">' + (isPerm ? 'Permanent Trench' : 'Trench (basic)') + '</div>' +
+            '<div class="eff-desc">+' + tDef + ' DEF' + (isPerm ? ' · permanent' : ' · vanishes on move') + '</div></div></div>');
+        }
+        if (sel.formationPartnerId) {
+          effs.push('<div class="eff-row active-formation">' +
+            '<div class="eff-icon"><img src="../assets/game-icons/formation.png" alt="formation"></div>' +
+            '<div><div class="eff-name">Formation</div>' +
+            '<div class="eff-desc">Combined DEF · no move · no counter</div></div></div>');
+        }
+        if (lowHp) {
+          effs.push('<div class="eff-row active-low-hp">' +
+            '<div class="eff-icon"><span class="eff-icon-glyph">!</span></div>' +
+            '<div><div class="eff-name">Critical HP</div><div class="eff-desc">Below half health.</div></div></div>');
+        }
+        if (sel.actionsRemaining <= 0 && sel.player === _currentPlayer) {
+          effs.push('<div class="eff-row active-exhausted">' +
+            '<div class="eff-icon"><span class="eff-icon-glyph" style="color:var(--olive)">×</span></div>' +
+            '<div><div class="eff-name">Exhausted</div><div class="eff-desc">No actions remaining.</div></div></div>');
+        }
+
+        var sprSrc = _cachedSprites[sel.type] || UNIT_SPRITE[sel.type] || '';
         infoEl.innerHTML =
-          '<div style="font-family:\'Special Elite\',monospace;font-size:13px;letter-spacing:1px;">' +
-            sel.type.toUpperCase() + ' · P' + sel.player +
-          '</div>' +
-          '<div style="font-family:\'VT323\',monospace;font-size:13px;color:var(--olive);letter-spacing:1px;">' +
-            'HP '+sel.hp+'/'+sel.maxHp+' · STR '+stats.strength+' · DEF '+defEff.total.toFixed(1)+' · REACH '+stats.reach +
-          '</div>' +
-          '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">' +
-            '<span class="twp-act-stamp'+(sel.actionsRemaining<2?' twp-act-used':'')+'">ACT I</span>' +
-            '<span class="twp-act-stamp'+(sel.actionsRemaining<1?' twp-act-used':'')+'">ACT II</span>' +
-            (trenchLabel ? '<span style="font-family:\'VT323\',monospace;font-size:12px;color:var(--green);margin-left:4px;display:flex;align-items:center;gap:3px;"><img src="../assets/game-icons/trench.png" style="width:12px;height:12px;image-rendering:pixelated;vertical-align:middle;">'+trenchLabel+'</span>' : '') +
-            (sel.formationPartnerId ? '<span style="font-family:\'VT323\',monospace;font-size:12px;color:var(--teal);margin-left:4px;display:flex;align-items:center;gap:3px;"><img src="../assets/game-icons/formation.png" style="width:12px;height:12px;image-rendering:pixelated;vertical-align:middle;">FORMATION</span>' : '') +
+          '<div class="sel-card">' +
+            '<div class="sel-head">' +
+              '<div class="sel-portrait ' + (sel.player === 1 ? 'p1' : 'p2') + '">' +
+                '<img src="' + sprSrc + '" alt="' + sel.type + '">' +
+              '</div>' +
+              '<div>' +
+                '<div class="sel-name">' + sel.type.toUpperCase() + '</div>' +
+                '<div class="sel-class"><span class="sel-rank lvl-' + lvl + '">L' + lvl + ' · ' + rank + '</span></div>' +
+                '<div class="sel-class" style="margin-top:3px;">Facing ' + sel.facing + ' · ' + bLabel + (terrDef > 0 ? ' (+' + terrDef + ' DEF)' : '') + '</div>' +
+              '</div>' +
+              '<span class="sel-stamp-mini ' + (sel.player === 1 ? 'p1' : 'p2') + '">P' + sel.player + '</span>' +
+            '</div>' +
+            '<div class="sel-stats">' +
+              '<div class="sel-stat"><div class="sel-stat-label">HP</div>' +
+                '<div class="sel-stat-val nb">' + sel.hp + '<span class="small">/' + sel.maxHp + '</span></div>' +
+                '<div class="sel-hp-bar' + (lowHp ? ' low' : '') + '">' + pipsHtml + '</div></div>' +
+              '<div class="sel-stat"><div class="sel-stat-label">Actions</div>' +
+                '<div class="sel-stat-val">' + sel.actionsRemaining + '<span class="small">/2</span></div></div>' +
+              '<div class="sel-stat"><div class="sel-stat-label">Reach</div>' +
+                '<div class="sel-stat-val">' + stats.reach + '</div></div>' +
+              '<div class="sel-stat"><div class="sel-stat-label">STR</div>' +
+                '<div class="sel-stat-val nb">' + stats.strength + '</div></div>' +
+              '<div class="sel-stat"><div class="sel-stat-label">DEF</div>' +
+                '<div class="sel-stat-val nb">' + defEff.total.toFixed(1) + '</div></div>' +
+              '<div class="sel-stat"><div class="sel-stat-label">Move</div>' +
+                '<div class="sel-stat-val">' + stats.movement.ortho + '<span class="small">/' + stats.movement.diag + '</span></div></div>' +
+            '</div>' +
+            '<div class="sel-effects">' +
+              '<div class="sel-effects-label">Active Effects</div>' +
+              (effs.length ? effs.join('') : '<div class="sel-empty-effects">// none active</div>') +
+            '</div>' +
           '</div>';
       }
     }

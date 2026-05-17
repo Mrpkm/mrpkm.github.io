@@ -155,36 +155,30 @@
   const panels = {
     patch: () => panel(`
       <header>
-        <h2>Patch Notes</h2>
-        <span class="stamp">v0.1.5.0</span>
+        <h2>Game Launch</h2>
+        <span class="stamp">v1.0 — LIVE</span>
       </header>
-      <p class="meta">v0.1.5.0 &mdash; Almost Live!</p>
+      <p class="meta">The game is now live &mdash; Welcome to the front, Commander.</p>
       <div class="patch">
-        <h3>New Screens &amp; Design</h3>
+        <h3>What&apos;s Deployed</h3>
         <ul>
-          <li><span class="tag add">ADD</span>Entry screen (index.html) redesigned — classified dossier with animated CTA button and bottom ticker.</li>
-          <li><span class="tag add">ADD</span>Map Builder completely redesigned with real PNG tiles, proper tool tray, facing compass rose, and deployment zone overlays.</li>
-          <li><span class="tag add">ADD</span>Field Manual &mdash; interactive 8-section rules tutorial with live mini-boards, drill progress tracking, and completion screen. Replaces the static text rules.</li>
+          <li><span class="tag add">LIVE</span>Full 2-player tactical battle on handcrafted maps &mdash; complete turn-based rules engine.</li>
+          <li><span class="tag add">LIVE</span>Pre-Game Setup &mdash; pick a doctrine, spend war-points, place your army on the half-board.</li>
+          <li><span class="tag add">LIVE</span>Tactical Map Editor &mdash; paint terrain, place unit tokens, seal the briefing before battle.</li>
+          <li><span class="tag add">LIVE</span>Interactive Field Manual &mdash; 8-section rules tutorial with live mini-board drills and progress tracking.</li>
         </ul>
-        <h3>Gameplay Fixes</h3>
+        <h3>Core Systems</h3>
         <ul>
-          <li><span class="tag fix">FIX</span>Deploy button is now fully disabled (not just warned) when no units are placed on the map. Cannot be clicked at all without at least one unit.</li>
-          <li><span class="tag fix">FIX</span>Game-over overlay now shows &ldquo;Go Back to HQ&rdquo; as the only action, navigating cleanly back to the Command Desk.</li>
-          <li><span class="tag fix">FIX</span>Restore Last Map button is now blurred and marked &ldquo;Coming Soon&rdquo; — same treatment as the AI Game button.</li>
+          <li><span class="tag add">LIVE</span>Three doctrines: Plain, Blitzkrieg, and Superior Firepower &mdash; each with unique army composition and signature rules.</li>
+          <li><span class="tag add">LIVE</span>Full combat engine: facing, positional tactics, trench escalation, encirclement, counter-attack, and range falloff.</li>
+          <li><span class="tag add">LIVE</span>Unit progression: Corporal &rarr; Captain &rarr; Colonel with doctrine-specific XP upgrades.</li>
+          <li><span class="tag add">LIVE</span>War-point economy: buy extra units, pre-buy XP, and purchase spawn-state bonuses before deployment.</li>
         </ul>
-        <h3>Visuals</h3>
+        <h3>Coming Soon</h3>
         <ul>
-          <li><span class="tag add">ADD</span>Player 1 units now show a blue tint (opposite of their red zone) — both sides are now visually distinct by zone color.</li>
-          <li><span class="tag add">ADD</span>Conquered territory: when a unit crosses into the enemy&apos;s zone, that tile gets a pulsing color overlay indicating occupied ground.</li>
-          <li><span class="tag add">ADD</span>Quick-start tutorial shown at the beginning of each 2-player game — 3 step overlay highlighting Move, Attack, and End Turn buttons. Always skippable.</li>
-        </ul>
-        <h3>Previous (v1.5.0)</h3>
-        <ul>
-          <li><span class="tag add">ADD</span>Red/Blue zone territory overlays on the map.</li>
-          <li><span class="tag add">ADD</span>End-game breakthrough win condition (reach the enemy start row).</li>
-          <li><span class="tag add">ADD</span>AI Game and Restore Map buttons marked &ldquo;Coming Soon&rdquo;.</li>
-          <li><span class="tag add">ADD</span>War-point economy display in the Briefing Dossier.</li>
-          <li><span class="tag fix">FIX</span>Rotate mode fixed &middot; actions can&apos;t go below 0 &middot; unit animations start immediately.</li>
+          <li><span class="tag fix">SOON</span>AI opponent &mdash; tactical sandbox with a full rules engine and NATO symbol units.</li>
+          <li><span class="tag fix">SOON</span>Restore Last Map &mdash; re-open the most recently loaded briefing from the field safe.</li>
+          <li><span class="tag fix">SOON</span>Demonstration Map &mdash; sealed practice briefing with Plain doctrine and mixed terrain.</li>
         </ul>
       </div>
     `),
@@ -192,46 +186,49 @@
     whatsnew: () => panel(`
       <header>
         <h2>What's New?</h2>
-        <span class="stamp">v0.1.5.0</span>
+        <span class="stamp">v1.0 — LAUNCH</span>
       </header>
-      <p class="meta">Field bulletin &mdash; v0.1.5.0 &ldquo;Almost Live!&rdquo;</p>
+      <p class="meta">Transmission from HQ &mdash; The game is officially live. Welcome to the field.</p>
 
       <div class="letter urgent">
-        <div class="from"><span><strong>NEW</strong> &middot; Entry Screen Redesign</span><span>v0.1.5.0</span></div>
-        <div>The landing page is now a proper classified dossier &mdash; animated CTA button,
-          scanline vignette, ticker at the bottom, and corner glow halos. First impressions matter.</div>
-      </div>
-
-      <div class="letter urgent">
-        <div class="from"><span><strong>NEW</strong> &middot; Map Builder Redesign</span><span>v0.1.5.0</span></div>
-        <div>The tactical map editor has been overhauled with real PNG terrain tiles, a proper
-          tool tray with facing compass rose, deployment zone overlays, and a blurred desk background.</div>
+        <div class="from"><span><strong>LAUNCH</strong> &middot; 2-Player Tactical Battle</span><span>v1.0</span></div>
+        <div>The full turn-based rules engine is live. Two commanders, one board &mdash;
+          pick your doctrine, deploy your army, and fight for the enemy HQ. May the better
+          tactician win.</div>
       </div>
 
       <div class="letter urgent">
-        <div class="from"><span><strong>NEW</strong> &middot; Interactive Field Manual</span><span>v0.1.5.0</span></div>
-        <div>The old static rule text is replaced by a full 8-section interactive tutorial:
-          The Objective, Move a Unit, Attack &amp; Odds, Terrain, Ranks, Doctrines, War Points, and the Dossier.
-          Each section has a live mini-board drill and progress tracking.</div>
+        <div class="from"><span><strong>LAUNCH</strong> &middot; Three Doctrines</span><span>v1.0</span></div>
+        <div>Plain, Blitzkrieg, and Superior Firepower are all operational. Each brings its own
+          free starting army, war-point budget, and signature rule. Your doctrine defines how
+          you fight.</div>
+      </div>
+
+      <div class="letter urgent">
+        <div class="from"><span><strong>LAUNCH</strong> &middot; Tactical Map Editor</span><span>v1.0</span></div>
+        <div>Paint any terrain, drop unit tokens, set deployment zones &mdash; then seal the
+          briefing and send both commanders into battle. Every map is handcrafted.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Quick-Start In-Game Tutorial</span><span>v0.1.5.0</span></div>
-        <div>At the start of every 2-player battle a 3-step overlay highlights the Move, Attack,
-          and End Turn buttons. Skippable any time. New commanders will know where to look.</div>
+        <div class="from"><span>Interactive Field Manual</span><span>v1.0</span></div>
+        <div>Eight sections, live mini-board drills, and drill progress tracking. New to the
+          game? Open the Field Manual before your first deployment &mdash; it covers everything
+          from movement to doctrines.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Unit Colors &amp; Conquered Territory</span><span>v0.1.5.0</span></div>
-        <div>Player 1&rsquo;s units now show a blue tint (opposite of their red zone) to match
-          Player 2&rsquo;s existing red treatment. When a unit crosses into enemy ground, the tile
-          gets a pulsing color overlay indicating captured territory.</div>
+        <div class="from"><span>Pre-Game Setup &amp; War Points</span><span>v1.0</span></div>
+        <div>Spend your doctrine budget before the battle begins: buy extra units, pre-purchase
+          XP levels, spawn units entrenched or in formation. Every point counts.</div>
       </div>
 
       <div class="letter">
-        <div class="from"><span>Fixes &amp; Guards</span><span>v0.1.5.0</span></div>
-        <div>Deploy button fully disabled (not just warned) with zero units. Game-over overlay
-          now navigates back to HQ. Restore Last Map marked &ldquo;Coming Soon&rdquo;.</div>
+        <div class="from"><span>&#9993; Contact &mdash; Bugs &amp; Feature Requests</span><span>HQ</span></div>
+        <div>Found a bug? Have an idea for a new feature or rule? Send your report directly
+          to the developer at <strong><a href="mailto:paradikendem@gmail.com" style="color:inherit;">paradikendem@gmail.com</a></strong>.
+          All feedback is read and appreciated &mdash; the game gets better with your
+          field reports.</div>
       </div>
     `),
 
