@@ -1414,21 +1414,34 @@ function loadSavedState() {
 }
 
 function App() {
-  const savedState = loadSavedState();
-  const [doctrineId, setDoctrineId] = useState(savedState ? savedState.doctrineId : 'blitzkrieg');
+  const [doctrineId, setDoctrineId] = useState(() => {
+    const s = loadSavedState();
+    return s ? s.doctrineId : 'blitzkrieg';
+  });
   const [setup, setSetup] = useState(() => {
-    if (savedState && savedState.setup) return { ...newSetup(), ...savedState.setup, placements: savedState.setup.placements || [] };
+    const s = loadSavedState();
+    if (s && s.setup) return { ...newSetup(), ...s.setup, placements: s.setup.placements || [] };
     return { ...newSetup(), placements: [] };
   });
-  const [tab, setTab] = useState(savedState ? (savedState.tab || savedState.doctrineId) : 'blitzkrieg');
-  const [subtab, setSubtab] = useState(savedState ? (savedState.subtab || 'roster') : 'roster');
+  const [tab, setTab] = useState(() => {
+    const s = loadSavedState();
+    return s ? (s.tab || s.doctrineId) : 'blitzkrieg';
+  });
+  const [subtab, setSubtab] = useState(() => {
+    const s = loadSavedState();
+    return s ? (s.subtab || 'roster') : 'roster';
+  });
   const twpPhase = localStorage.getItem('twp_setup_phase'); // '1', '2', or null
 
-  // Persist state to localStorage whenever it changes
+  // Persist state to localStorage on every change and before page unload
   useEffect(() => {
-    try {
-      localStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify({ doctrineId, setup, tab, subtab }));
-    } catch (e) {}
+    const snapshot = { doctrineId, setup, tab, subtab };
+    try { localStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify(snapshot)); } catch (e) {}
+    const save = () => {
+      try { localStorage.setItem(SETUP_STORAGE_KEY, JSON.stringify(snapshot)); } catch (e) {}
+    };
+    window.addEventListener('beforeunload', save);
+    return () => window.removeEventListener('beforeunload', save);
   }, [doctrineId, setup, tab, subtab]);
 
   const tabs = [
@@ -1439,8 +1452,12 @@ function App() {
   ];
 
   function pickDoctrine(id) {
-    setDoctrineId(id); setTab(id);
-    setSetup({ ...newSetup(), placements: [] });
+    if (id !== doctrineId) {
+      // Switching to a different doctrine — wipe incompatible setup
+      setSetup({ ...newSetup(), placements: [] });
+    }
+    setDoctrineId(id);
+    setTab(id);
     setSubtab('roster');
   }
 
