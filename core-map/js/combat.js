@@ -14,7 +14,9 @@
                  ignoresTactics: true, hasFalloff: true },
   };
 
-  var TRENCH_DEF = { Infantry: 2, Cavalry: 1.5 };
+  /* Trench defense bonuses — basic (3+ turns) and permanent (6+ turns) */
+  var TRENCH_DEF      = { Infantry: 2,   Cavalry: 1.5 };
+  var TRENCH_DEF_PERM = { Infantry: 1,   Cavalry: 1   };
 
   var TERRAIN_DEF = {
     P: { Infantry: 0,   Cavalry: 0,   Tanks: 0,   Motorized: 0,   Artillery: 0   },
@@ -37,6 +39,9 @@
 
   var BIOME_LABEL = { P: 'PLAIN', F: 'FOREST', M: 'MOUNTAIN', S: 'SWAMP' };
 
+  /* Light unit types that can form a formation */
+  var LIGHT_TYPES = ['Infantry', 'Cavalry'];
+
   /* ── Geometry ─────────────────────────────── */
   function cheb(r1,c1,r2,c2) { return Math.max(Math.abs(r2-r1), Math.abs(c2-c1)); }
   function manh(r1,c1,r2,c2) { return Math.abs(r2-r1) + Math.abs(c2-c1); }
@@ -48,14 +53,30 @@
   /* ── Movement ─────────────────────────────── */
   function canMoveTo(unit, tr, tc, units, biomeAt, gridRows, gridCols) {
     if (tr < 1 || tr > gridRows || tc < 1 || tc > gridCols) return false;
-    if (units.some(function (u) { return u.row === tr && u.col === tc; })) return false;
+
+    /* Formation units cannot move */
+    if (unit.formationPartnerId) return false;
+
     var biome = biomeAt(tr, tc);
     if (!TERRAIN_ENTRY[biome](unit.type)) return false;
+
+    /* Check occupancy — formation entry is the only allowed stack */
+    var occs = units.filter(function (u) { return u.row === tr && u.col === tc; });
+    if (occs.length >= 2) return false;
+    if (occs.length === 1) {
+      var occ = occs[0];
+      /* Only allow if: same player, both light types, neither already in formation */
+      if (occ.player !== unit.player) return false;
+      if (LIGHT_TYPES.indexOf(unit.type) === -1) return false;
+      if (LIGHT_TYPES.indexOf(occ.type) === -1) return false;
+      if (occ.formationPartnerId) return false;
+      /* Fall through — formation stacking allowed, range check still applies */
+    }
 
     var stats = UNIT_STATS[unit.type];
     var dr = Math.abs(tr - unit.row), dc = Math.abs(tc - unit.col);
 
-    // Artillery on swamp: 1-square 8-direction only
+    /* Artillery on swamp: 1-square 8-direction only */
     if (unit.type === 'Artillery' && biome === 'S') return Math.max(dr, dc) === 1;
 
     var orthoMax = stats.movement.ortho;
@@ -100,21 +121,39 @@
         && enemy(defender.row,   defender.col+1);
   }
 
-  /* ── Double-attack: another friendly is ortho-adjacent to defender ─ */
+  /* ── Double-attack: another friendly is ortho-adjacent to defender ─
+     Formation is immune to double-attack (§ 4.2). */
   function hasDoubleAttack(attacker, defender, units) {
+    if (defender.formationPartnerId) return false;
     return units.some(function (u) {
       return u.player === attacker.player && u.id !== attacker.id &&
              isOrthoNeighbor(u.row, u.col, defender.row, defender.col);
     });
   }
 
-  /* ── Effective defense ────────────────────── */
-  function effectiveDefense(defender, biomeAt) {
+  /* ── Effective defense ─────────────────────────────────────────────
+     units (optional) — needed to resolve formation partner bonus.
+     Supports trench tiers: true = basic (+2/+1.5), 'perm' = permanent (+1). */
+  function effectiveDefense(defender, biomeAt, units) {
     var base  = UNIT_STATS[defender.type].defense;
     var biome = biomeAt(defender.row, defender.col);
     var terr  = (TERRAIN_DEF[biome] && TERRAIN_DEF[biome][defender.type]) || 0;
-    var tr    = defender.trenched ? (TRENCH_DEF[defender.type] || 0) : 0;
-    return { base: base, terr: terr, tr: tr, total: base + terr + tr };
+
+    var tr = 0;
+    if (defender.trenched === 'perm') {
+      tr = TRENCH_DEF_PERM[defender.type] || 0;
+    } else if (defender.trenched) {
+      tr = TRENCH_DEF[defender.type] || 0;
+    }
+
+    /* Formation: combined defense = both units' base defense values (§ 4.2) */
+    var form = 0;
+    if (units && defender.formationPartnerId) {
+      var partner = units.find(function (u) { return u.id === defender.formationPartnerId; });
+      if (partner) form = UNIT_STATS[partner.type].defense;
+    }
+
+    return { base: base, terr: terr, tr: tr, form: form, total: base + terr + tr + form };
   }
 
   /* ── Roll attack ──────────────────────────── */
@@ -141,10 +180,11 @@
       if (dist > 8) { strBonus -= 0.5; strMods.push('FALLOFF -0.5'); }
     }
 
-    var defEff   = effectiveDefense(defender, biomeAt);
+    var defEff   = effectiveDefense(defender, biomeAt, units);
     var defBonus = 0, defMods = [];
     if (defEff.terr > 0) defMods.push((BIOME_LABEL[biomeAt(defender.row, defender.col)] || '') + ' +' + defEff.terr);
     if (defEff.tr   > 0) defMods.push('TRENCH +' + defEff.tr);
+    if (defEff.form > 0) defMods.push('FORM +' + defEff.form);
     if (!ignoresTactics) {
       if (direction === 'SIDE') { defBonus -= 0.5; defMods.push('SIDE -0.5'); }
       if (direction === 'REAR') { defBonus -= 1;   defMods.push('REAR -1');   }
@@ -164,6 +204,7 @@
 
   window.Combat = {
     UNIT_STATS:       UNIT_STATS,
+    LIGHT_TYPES:      LIGHT_TYPES,
     canMoveTo:        canMoveTo,
     canAttack:        canAttack,
     rollAttack:       rollAttack,

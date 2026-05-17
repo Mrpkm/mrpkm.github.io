@@ -12,6 +12,7 @@
   var _gridCols      = 11;
   var _currentPlayer = 1;
   var _conquered     = {};   // key → player (1 or 2)
+  var _boardTrenches = {};   // 'row,col' → { type: 'basic'|'perm' } — persistent trench left on cell
   var _mode          = 'move';   // 'move' | 'attack' | 'rotate'
   var _selectedId    = null;
   var _log           = [];
@@ -37,6 +38,8 @@
     { title:'MOVE YOUR UNITS',   body:'Click a unit to select it. <strong>Gold squares</strong> show legal moves — click one to march. Each unit can act up to 2 times per turn.', target:'twp-btn-move' },
     { title:'ATTACK ENEMIES',    body:'Switch to <strong>Attack</strong> mode, then click a red-highlighted enemy. Direction matters — rear attacks deal more damage. They counter-strike!', target:'twp-btn-attack' },
     { title:'END YOUR TURN',     body:'When done, press <strong>End Turn</strong>. The board rotates — each player always faces upward. Unused action points are banked for your next turn.', target:'twp-btn-end' },
+    { title:'ENTRENCHMENT',      body:'<strong>Infantry and Cavalry</strong> that stay still for <strong>3 turns</strong> automatically dig a trench — gaining +2 / +1.5 defense. A <img src="../assets/game-icons/trench.png" style="width:14px;height:14px;vertical-align:middle;image-rendering:pixelated;"> icon appears on the unit. Hold <strong>6 turns</strong> for a permanent trench (+1 def). Leaving after 4+ turns keeps the trench on the cell for others to use.', target:'twp-btn-end' },
+    { title:'FORMATION',         body:'In <strong>Move</strong> mode, move a light unit (Infantry or Cavalry) onto a <strong>friendly light unit</strong> to stack them in formation. They gain <strong>combined defense</strong> and ignore double-attacks — but <strong>cannot move or counter-attack</strong>. A <img src="../assets/game-icons/formation.png" style="width:14px;height:14px;vertical-align:middle;image-rendering:pixelated;"> icon marks the pair. When one dies, the other moves freely again.', target:'twp-btn-move' },
   ];
   function _showTutorial() {
     var overlay = document.getElementById('twp-tutorial');
@@ -77,6 +80,7 @@
       facing: player === 1 ? 'N' : 'S',
       hp: stats.hp, maxHp: stats.hp,
       actionsRemaining: 2, turnsStill: 0, trenched: false, movedThisTurn: false,
+      formationPartnerId: null,
     };
   }
 
@@ -148,6 +152,7 @@
     _units             = units;
     _p1ActionPoints    = 20;
     _p2ActionPoints    = 0;
+    _boardTrenches     = {};
 
     document.querySelectorAll('#map-root .unit, #map-root .twp-unit').forEach(function (el) { el.remove(); });
     _unitEls = {};
@@ -221,6 +226,7 @@
           row: u.row, col: u.col, facing: 'N',
           hp: stats.hp, maxHp: stats.hp,
           actionsRemaining: 2, turnsStill: 0, trenched: false, movedThisTurn: false,
+          formationPartnerId: null,
         };
       });
       // P2 gets default mirrored layout
@@ -273,6 +279,7 @@
           row: u.row, col: u.col, facing: 'N',
           hp: stats.hp, maxHp: stats.hp,
           actionsRemaining: 2, turnsStill: 0, trenched: false, movedThisTurn: false,
+          formationPartnerId: null,
         };
       });
 
@@ -296,6 +303,7 @@
             facing: flipFacing[u.facing] || 'S',
             hp: u.hp, maxHp: u.maxHp,
             actionsRemaining: 2, turnsStill: 0, trenched: false, movedThisTurn: false,
+            formationPartnerId: null,
           });
         }
       });
@@ -329,6 +337,7 @@
             row: u.row, col: u.col, facing: 'N',
             hp: stats.hp, maxHp: stats.hp,
             actionsRemaining: 2, turnsStill: 0, trenched: false, movedThisTurn: false,
+            formationPartnerId: null,
           };
         });
       } catch (e) {}
@@ -347,6 +356,7 @@
             row: rows + 1 - u.row, col: cols + 1 - u.col, facing: 'S',
             hp: stats.hp, maxHp: stats.hp,
             actionsRemaining: 2, turnsStill: 0, trenched: false, movedThisTurn: false,
+            formationPartnerId: null,
           };
         });
       } catch (e) {}
@@ -388,6 +398,11 @@
       _selectedId = null; _renderAllUnits(); _renderDossier(); return;
     }
     if (occ && occ.player === _currentPlayer && occ.actionsRemaining > 0 && _getAP() > 0) {
+      /* Formation entry: if in move mode and canMoveTo allows stacking, move rather than re-select */
+      if (_mode === 'move' && sel && _getAP() >= 1 &&
+          window.Combat.canMoveTo(sel, row, col, _units, _biomeAt, _gridRows, _gridCols)) {
+        _doMove(sel, row, col); return;
+      }
       _selectedId = occ.id; _renderAllUnits(); _renderDossier(); return;
     }
 
@@ -413,8 +428,93 @@
     }
   }
 
+  /* ── Board-trench helpers ───────────────────────────────────── */
+  function _markBoardTrench(row, col, type) {
+    var k = row + ',' + col;
+    _boardTrenches[k] = { type: type || 'basic' };
+    var cellEl = window.MapRenderer && window.MapRenderer.getCellEl(row, col);
+    if (cellEl) {
+      cellEl.classList.remove('twp-btrench', 'twp-btrench-perm');
+      cellEl.classList.add(type === 'perm' ? 'twp-btrench-perm' : 'twp-btrench');
+    }
+  }
+  function _clearBoardTrench(row, col) {
+    delete _boardTrenches[row + ',' + col];
+    var cellEl = window.MapRenderer && window.MapRenderer.getCellEl(row, col);
+    if (cellEl) cellEl.classList.remove('twp-btrench', 'twp-btrench-perm');
+  }
+  function _clearAllBoardTrenches() {
+    Object.keys(_boardTrenches).forEach(function (k) {
+      var p = k.split(',');
+      var cellEl = window.MapRenderer && window.MapRenderer.getCellEl(+p[0], +p[1]);
+      if (cellEl) cellEl.classList.remove('twp-btrench', 'twp-btrench-perm');
+    });
+    _boardTrenches = {};
+  }
+
+  /* ── Formation ──────────────────────────────────────────────── */
+  function _doFormation(mover, target) {
+    /* Handle board trench at mover's old position */
+    var oldKey = mover.row + ',' + mover.col;
+    var existingOldBT = _boardTrenches[oldKey];
+    if (existingOldBT) {
+      if (existingOldBT.type !== 'perm' && mover.turnsStill < 4) _clearBoardTrench(mover.row, mover.col);
+    } else if (mover.turnsStill >= 4) {
+      _markBoardTrench(mover.row, mover.col, mover.turnsStill >= 6 ? 'perm' : 'basic');
+    }
+    /* Check for board trench at formation destination */
+    var destKey = target.row + ',' + target.col;
+    var destBT = _boardTrenches[destKey];
+    var immediateTrench = false;
+    if (destBT && window.Combat.UNIT_STATS[mover.type].trench && _biomeAt(target.row, target.col) !== 'S') {
+      immediateTrench = destBT.type === 'perm' ? 'perm' : true;
+    }
+    _spendAP(1);
+    _mutate(mover.id, {
+      row: target.row, col: target.col, facing: mover.facing,
+      actionsRemaining: Math.max(0, mover.actionsRemaining - 1),
+      turnsStill: 0, trenched: immediateTrench, movedThisTurn: true,
+      formationPartnerId: target.id,
+    });
+    _mutate(target.id, { formationPartnerId: mover.id });
+    _pushLog({ kind:'mv', text: SHORT[mover.type]+' P'+mover.player+' joins '+SHORT[target.type]+' — FORMATION.' });
+    var upd = _units.find(function (u) { return u.id === mover.id; });
+    if (upd && upd.actionsRemaining <= 0) _selectedId = null;
+    _checkWinner();
+    _checkEndReached();
+    _applyConquest(mover.player, target.row, target.col);
+    _renderAllUnits(); _renderDossier();
+  }
+
   /* ── Move ───────────────────────────────────────────────────── */
   function _doMove(unit, tr, tc) {
+    /* Dispatch to formation if moving onto a friendly light unit */
+    var targetUnit = _units.find(function (u) { return u.row === tr && u.col === tc && u.player === unit.player; });
+    if (targetUnit) { _doFormation(unit, targetUnit); return; }
+
+    /* Board trench at old position: leave one if unit held long enough */
+    var oldKey = unit.row + ',' + unit.col;
+    var existingBT = _boardTrenches[oldKey];
+    if (existingBT) {
+      if (existingBT.type !== 'perm' && unit.turnsStill < 4) {
+        _clearBoardTrench(unit.row, unit.col);
+      }
+      /* Permanent trench: never removed. Basic + held >= 4 turns: refresh (no change). */
+    } else if (unit.turnsStill >= 4) {
+      var trType = unit.turnsStill >= 6 ? 'perm' : 'basic';
+      _markBoardTrench(unit.row, unit.col, trType);
+      _pushLog({ kind:'mv', text: SHORT[unit.type]+' P'+unit.player+' left a trench at ('+unit.row+','+unit.col+').' });
+    }
+
+    /* Check for board trench at destination — immediate occupation bonus */
+    var destKey = tr + ',' + tc;
+    var destBT = _boardTrenches[destKey];
+    var immediateTrench = false;
+    if (destBT && window.Combat.UNIT_STATS[unit.type].trench && _biomeAt(tr, tc) !== 'S') {
+      immediateTrench = destBT.type === 'perm' ? 'perm' : true;
+      _pushLog({ kind:'mv', text: SHORT[unit.type]+' P'+unit.player+' uses standing trench.' });
+    }
+
     var dr = tr - unit.row, dc = tc - unit.col;
     var f = unit.facing;
     if (Math.abs(dr) >= Math.abs(dc)) f = dr < 0 ? 'N' : (dr > 0 ? 'S' : f);
@@ -424,7 +524,7 @@
     _mutate(unit.id, {
       row: tr, col: tc, facing: f,
       actionsRemaining: Math.max(0, unit.actionsRemaining - 1),
-      turnsStill: 0, trenched: false, movedThisTurn: true,
+      turnsStill: 0, trenched: immediateTrench, movedThisTurn: true,
     });
     _pushLog({ kind:'mv', text: SHORT[unit.type]+' P'+unit.player+' → ('+tr+','+tc+') ['+
       (biomeNames[_biomeAt(tr,tc)]||'PLAIN')+']'+(unit.trenched?' (trench lost)':'')+'.' });
@@ -455,7 +555,10 @@
 
     var defAlive = _units.find(function (u) { return u.id === defender.id; });
     var atkAlive = _units.find(function (u) { return u.id === attacker.id; });
-    if (defAlive && atkAlive && defAlive.actionsRemaining > 0 && window.Combat.canAttack(defAlive, atkAlive)) {
+    /* Formation units cannot counter-attack (§ 4.3) */
+    if (defAlive && atkAlive && defAlive.actionsRemaining > 0 &&
+        !defAlive.formationPartnerId &&
+        window.Combat.canAttack(defAlive, atkAlive)) {
       var cr = window.Combat.rollAttack(defAlive, atkAlive, _units, _biomeAt);
       var cHp = Math.max(0, atkAlive.hp - cr.damage);
       _pushLog({
@@ -477,7 +580,7 @@
 
   function _detail(atk, def, r, newHp) {
     var aStr  = window.Combat.UNIT_STATS[atk.type].strength;
-    var defEff = window.Combat.effectiveDefense(def, _biomeAt);
+    var defEff = window.Combat.effectiveDefense(def, _biomeAt, _units);
     var sM = r.strMods.length ? ' ['+r.strMods.join(', ')+']' : '';
     var dM = r.defMods.length ? ' ['+r.defMods.join(', ')+']' : '';
     return 'd6='+r.roll+' str='+aStr+sM+' → '+r.atkPwr.toFixed(1)+' vs def='+defEff.total+dM+'='+r.defVal.toFixed(1)+' → -'+r.damage+(newHp===0 ? ' ☠ KIA' : ' ('+def.hp+'→'+newHp+')');
@@ -492,9 +595,21 @@
       if (u.player === _currentPlayer) {
         var newStill  = u.movedThisTurn ? 0 : u.turnsStill + 1;
         var canTrench = window.Combat.UNIT_STATS[u.type].trench && _biomeAt(u.row, u.col) !== 'S';
-        var trenched  = canTrench && newStill >= 3;
-        if (trenched && !u.trenched) _pushLog({ kind:'mv', text: SHORT[u.type]+' P'+u.player+' digs in — TRENCH.' });
-        return Object.assign({}, u, { turnsStill: newStill, trenched: trenched, movedThisTurn: false });
+        var onBoardTrench = !!_boardTrenches[u.row + ',' + u.col];
+        var newTrenched = false;
+        if (canTrench) {
+          if (newStill >= 6) {
+            newTrenched = 'perm';
+          } else if (newStill >= 3 || (onBoardTrench && !u.movedThisTurn)) {
+            newTrenched = (onBoardTrench && _boardTrenches[u.row+','+u.col].type === 'perm') ? 'perm' : true;
+          }
+        }
+        if (newTrenched === 'perm' && u.trenched !== 'perm') {
+          _pushLog({ kind:'mv', text: SHORT[u.type]+' P'+u.player+' — TRENCH PERMANENT (+1 def).' });
+        } else if (newTrenched && !u.trenched) {
+          _pushLog({ kind:'mv', text: SHORT[u.type]+' P'+u.player+' digs in — TRENCH.' });
+        }
+        return Object.assign({}, u, { turnsStill: newStill, trenched: newTrenched, movedThisTurn: false });
       }
       if (u.player === next) return Object.assign({}, u, { actionsRemaining: 2, movedThisTurn: false });
       return u;
@@ -528,6 +643,7 @@
     document.querySelectorAll('#map-root .twp-unit').forEach(function (el) { el.remove(); });
     _clearZoneOverlays();
     _clearConquest();
+    _clearAllBoardTrenches();
     _unitEls = {};
 
     if (_p1BriefCode || _p2BriefCode) {
@@ -569,6 +685,11 @@
     _units = _units.map(function (u) { return u.id === id ? Object.assign({}, u, patch) : u; });
   }
   function _removeUnit(id) {
+    /* If this unit was in a formation, free the partner */
+    var dead = _units.find(function (u) { return u.id === id; });
+    if (dead && dead.formationPartnerId) {
+      _mutate(dead.formationPartnerId, { formationPartnerId: null });
+    }
     _units = _units.filter(function (u) { return u.id !== id; });
     var el = _unitEls[id];
     if (el) { el.remove(); delete _unitEls[id]; }
@@ -708,6 +829,7 @@
       if (inner) inner.style.transform = 'rotate(' + (-_boardRot) + 'deg)';
 
       _updateHpPips(el, unit);
+      _updateStatusIcons(el, unit);
     });
 
     // Remove orphaned elements
@@ -834,8 +956,41 @@
       hpBar.appendChild(pip);
     }
     inner.appendChild(hpBar);
+
+    // Status icons (trench + formation) — hidden until toggled by _updateStatusIcons
+    var trenchIconEl = document.createElement('img');
+    trenchIconEl.className = 'twp-status-icon twp-trench-icon';
+    trenchIconEl.src = '../assets/game-icons/trench.png';
+    trenchIconEl.alt = 'TRENCH';
+    trenchIconEl.style.display = 'none';
+    inner.appendChild(trenchIconEl);
+
+    var formIconEl = document.createElement('img');
+    formIconEl.className = 'twp-status-icon twp-form-icon';
+    formIconEl.src = '../assets/game-icons/formation.png';
+    formIconEl.alt = 'FORM';
+    formIconEl.style.display = 'none';
+    inner.appendChild(formIconEl);
+
     el.appendChild(inner);
     return el;
+  }
+
+  function _updateStatusIcons(el, unit) {
+    var trenchIcon = el.querySelector('.twp-trench-icon');
+    var formIcon   = el.querySelector('.twp-form-icon');
+    if (trenchIcon) {
+      var show = !!unit.trenched;
+      trenchIcon.style.display = show ? '' : 'none';
+      if (show) {
+        trenchIcon.title   = unit.trenched === 'perm' ? 'Permanent Trench (+1 def)' : 'Entrenched (Inf +2 / Cav +1.5 def)';
+        trenchIcon.style.opacity = unit.trenched === 'perm' ? '0.65' : '1';
+      }
+    }
+    if (formIcon) {
+      formIcon.style.display = unit.formationPartnerId ? '' : 'none';
+      if (unit.formationPartnerId) formIcon.title = 'In Formation (combined def, no move, no counter)';
+    }
   }
 
   function _updateHpPips(el, unit) {
@@ -944,8 +1099,9 @@
       if (!sel) {
         infoEl.innerHTML = '<span style="color:var(--olive);font-style:italic;font-size:12px;">Click one of your tokens.</span>';
       } else {
-        var defEff = window.Combat.effectiveDefense(sel, _biomeAt);
+        var defEff = window.Combat.effectiveDefense(sel, _biomeAt, _units);
         var stats  = window.Combat.UNIT_STATS[sel.type];
+        var trenchLabel = sel.trenched === 'perm' ? 'PERM TRENCH' : (sel.trenched ? 'TRENCHED' : '');
         infoEl.innerHTML =
           '<div style="font-family:\'Special Elite\',monospace;font-size:13px;letter-spacing:1px;">' +
             sel.type.toUpperCase() + ' · P' + sel.player +
@@ -953,10 +1109,11 @@
           '<div style="font-family:\'VT323\',monospace;font-size:13px;color:var(--olive);letter-spacing:1px;">' +
             'HP '+sel.hp+'/'+sel.maxHp+' · STR '+stats.strength+' · DEF '+defEff.total.toFixed(1)+' · REACH '+stats.reach +
           '</div>' +
-          '<div style="display:flex;gap:4px;margin-top:4px;">' +
+          '<div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">' +
             '<span class="twp-act-stamp'+(sel.actionsRemaining<2?' twp-act-used':'')+'">ACT I</span>' +
             '<span class="twp-act-stamp'+(sel.actionsRemaining<1?' twp-act-used':'')+'">ACT II</span>' +
-            (sel.trenched ? '<span style="font-family:\'VT323\',monospace;font-size:13px;color:var(--green);margin-left:6px;">TRENCHED</span>' : '') +
+            (trenchLabel ? '<span style="font-family:\'VT323\',monospace;font-size:12px;color:var(--green);margin-left:4px;display:flex;align-items:center;gap:3px;"><img src="../assets/game-icons/trench.png" style="width:12px;height:12px;image-rendering:pixelated;vertical-align:middle;">'+trenchLabel+'</span>' : '') +
+            (sel.formationPartnerId ? '<span style="font-family:\'VT323\',monospace;font-size:12px;color:var(--teal);margin-left:4px;display:flex;align-items:center;gap:3px;"><img src="../assets/game-icons/formation.png" style="width:12px;height:12px;image-rendering:pixelated;vertical-align:middle;">FORMATION</span>' : '') +
           '</div>';
       }
     }
@@ -964,9 +1121,10 @@
     // Mode buttons
     var sel2  = _selectedId ? _units.find(function (u) { return u.id === _selectedId; }) : null;
     var noAct = !sel2 || sel2.actionsRemaining <= 0;
+    var inFormation = !!(sel2 && sel2.formationPartnerId);
     var hasAtk = sel2 && _units.some(function (t) { return t.player !== sel2.player && window.Combat.canAttack(sel2, t); });
     var ap = _getAP();
-    _btnState('twp-btn-move',   _mode === 'move',   noAct || ap < 1);
+    _btnState('twp-btn-move',   _mode === 'move',   noAct || ap < 1 || inFormation);
     _btnState('twp-btn-attack', _mode === 'attack', noAct || !hasAtk || ap < 2);
     _btnState('twp-btn-rotate', _mode === 'rotate', false);
 
@@ -987,8 +1145,10 @@
     if (hintEl) {
       if (ap === 0) {
         hintEl.textContent = 'No action points — end your turn or rotate (free).';
+      } else if (inFormation) {
+        hintEl.textContent = 'Formation — cannot move. Rotate or attack only.';
       } else if (_mode === 'move') {
-        hintEl.textContent = 'Move: 1 pt · Cyan = legal moves · Forest/swamp cost +1.';
+        hintEl.textContent = 'Move: 1 pt · Cyan = legal · Light units can stack = Formation.';
       } else if (_mode === 'attack') {
         hintEl.textContent = ap < 2 ? 'Need 2 pts to attack.' : (hasAtk ? 'Attack: 2 pts · Red = in reach · They counter!' : 'No enemies in reach.');
       } else {

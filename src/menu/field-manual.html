@@ -752,6 +752,107 @@ function SecDossier({onAdvance}){
   );
 }
 
+/* ── Section 09: Formation & Entrenchment ── */
+function SecFormationTrench({onAdvance}){
+  const [view, setView] = React.useState('formation');
+  const [touched, setTouched] = React.useState(new Set(['formation']));
+  const rows=5, cols=7, scale=52;
+
+  function pick(v){ setView(v); setTouched(t=>{ const n=new Set(t); n.add(v); return n; }); }
+
+  /* Formation board units */
+  const formUnits=[
+    {id:'fp1',r:2,c:1,type:'infantry',side:'player',facing:'E'},
+    {id:'fp2',r:2,c:4,type:'infantry',side:'enemy', facing:'W'},
+    {id:'fp3',r:1,c:3,type:'cavalry', side:'enemy', facing:'S'},
+  ];
+  /* Trench board units */
+  const trenchUnits=[
+    {id:'tp1',r:2,c:2,type:'infantry',side:'player',facing:'E'},
+    {id:'tp2',r:2,c:5,type:'infantry',side:'enemy', facing:'W'},
+  ];
+
+  return (
+    <div className="doc-section">
+      <div className="doc-head">
+        <div className="left"><div className="kicker">// SECTION 09 · FORMATION &amp; TRENCH</div><h1>Stack &amp; Dig In</h1></div>
+        <div className="stamp">TACTICS</div>
+      </div>
+      <p>Two <strong>defensive mechanics</strong> exclusive to <strong>Infantry and Cavalry</strong>. Use them to hold key terrain and outlast aggressive pushes.</p>
+
+      <div className="pillrow">
+        <button className={`pill ${view==='formation'?'active':''}`} onClick={()=>pick('formation')}>Formation</button>
+        <button className={`pill ${view==='trench'?'active':''}`} onClick={()=>pick('trench')}>Entrenchment</button>
+      </div>
+
+      {view==='formation'&&(
+        <div className="miniboard-wrap" style={{marginTop:10}}>
+          {/* Miniboard with stacked-unit overlay */}
+          <div style={{position:'relative'}}>
+            <MiniBoard rows={rows} cols={cols} scale={scale} units={formUnits} />
+            {/* Formation badge — second infantry stacked on cell (1,1) zero-indexed */}
+            <div style={{position:'absolute',left:1*scale,top:2*scale,width:scale,height:scale,pointerEvents:'none',zIndex:10}}>
+              {/* Stacked second chip, slightly offset */}
+              <div style={{position:'absolute',inset:'12%',background:'rgba(44,77,138,0.55)',border:'2px solid rgba(100,160,255,0.95)',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:1}}>
+                <img src="../../assets/game-icons/formation.png" alt="FORM" style={{width:18,height:18,imageRendering:'pixelated',opacity:0.95}} />
+                <span style={{fontFamily:'VT323,monospace',fontSize:11,color:'#fff',letterSpacing:1}}>×2</span>
+              </div>
+            </div>
+            {/* Facing arrows annotation */}
+            <div style={{position:'absolute',left:1*scale+2,top:2*scale-18,fontFamily:'VT323,monospace',fontSize:12,color:'var(--hq-teal)',letterSpacing:1,pointerEvents:'none',whiteSpace:'nowrap'}}>FORM</div>
+          </div>
+
+          <div className="mb-aside">
+            <h4>How to form</h4>
+            <p>In Move mode, move a light unit <strong>onto a friendly light unit</strong>. They stack on the same square and pair up automatically (costs 1 action point).</p>
+            <h4>Advantages</h4>
+            <div className="kv">
+              <span className="k">Defense</span><span className="v">Combined (sum)</span>
+              <span className="k">Double-atk</span><span className="v">Immune</span>
+            </div>
+            <h4>Disadvantages</h4>
+            <div className="kv">
+              <span className="k">Movement</span><span className="v">None (locked)</span>
+              <span className="k">Counter</span><span className="v">Suppressed</span>
+            </div>
+            <div className="callout tip" style={{marginTop:8}}>Each unit <strong>rotates independently</strong> — a stacked Inf/Cav pair can face two arcs at once. When one unit dies the other moves freely again.</div>
+          </div>
+        </div>
+      )}
+
+      {view==='trench'&&(
+        <div className="miniboard-wrap" style={{marginTop:10}}>
+          <div style={{position:'relative'}}>
+            <MiniBoard rows={rows} cols={cols} scale={scale} units={trenchUnits} />
+            {/* Trench cell dashed overlay at (2,2) → pixel: left=2*scale top=2*scale */}
+            <div style={{position:'absolute',left:2*scale,top:2*scale,width:scale,height:scale,pointerEvents:'none',zIndex:3,border:'2.5px dashed rgba(80,200,80,0.85)',boxSizing:'border-box'}} />
+            <img src="../../assets/game-icons/trench.png" alt="TRENCH"
+              style={{position:'absolute',left:2*scale+3,top:2*scale+3,width:16,height:16,imageRendering:'pixelated',zIndex:10,pointerEvents:'none'}} />
+            {/* Turn counter badge */}
+            <div style={{position:'absolute',left:2*scale+2,top:2*scale+scale-18,fontFamily:'VT323,monospace',fontSize:12,color:'rgba(80,200,80,0.95)',letterSpacing:1,pointerEvents:'none'}}>T+3</div>
+          </div>
+
+          <div className="mb-aside">
+            <h4>How it works</h4>
+            <p>Any light unit that <strong>does not move for 3 consecutive turns</strong> automatically digs a trench. A <strong>green dashed cell border</strong> and a trench icon appear.</p>
+            <table className="hq-tab" style={{marginTop:6}}>
+              <tbody>
+                <tr><th>Tier</th><th>Condition</th><th>Inf DEF</th><th>Cav DEF</th><th>On leave</th></tr>
+                <tr><td>Basic</td><td>3 turns</td><td className="num">+2</td><td className="num">+1.5</td><td>Vanishes</td></tr>
+                <tr><td>Persistent</td><td>4 turns then leave</td><td className="num">+2</td><td className="num">+1.5</td><td>Stays on cell</td></tr>
+                <tr><td>Permanent</td><td>6 turns held</td><td className="num">+1</td><td className="num">+1</td><td>Never gone</td></tr>
+              </tbody>
+            </table>
+            <div className="callout" style={{marginTop:6}}><strong>No trench in swamp.</strong> Forest and mountains allow trenching, with bonuses stacking additively.</div>
+          </div>
+        </div>
+      )}
+
+      <DrillFooter label={touched.size>=2?'Both mechanics studied — ready to dig in.':'Inspect both tabs ('+touched.size+'/2).'} canAdvance={touched.size>=2} onAdvance={onAdvance} />
+    </div>
+  );
+}
+
 /* ── Completion screen ── */
 function SecDone({onRestart}){
   return (
@@ -759,7 +860,7 @@ function SecDone({onRestart}){
       <div className="done-screen">
         <div className="big-stamp">FIELD-READY</div>
         <h2>Briefing Complete</h2>
-        <p>You can move, fight, read terrain, promote, pick a doctrine, spend a budget, and read your dossier.</p>
+        <p>You can move, fight, read terrain, promote, pick a doctrine, spend a budget, read your dossier, and use formation and entrenchment tactics.</p>
         <p style={{fontFamily:'var(--font-terminal)',color:'var(--hq-olive)',fontSize:16,letterSpacing:2}}>▸ Return to the desk and load a sealed briefing.</p>
         <div style={{display:'flex',justifyContent:'center',gap:10,marginTop:16}}>
           <button className="btn-replay" onClick={onRestart}>↺ Replay Tutorial</button>
@@ -772,14 +873,15 @@ function SecDone({onRestart}){
 
 /* ── Main FieldManual component ── */
 const SECTIONS=[
-  {id:'briefing', num:'01', title:'The Objective',    Comp:SecBriefing},
-  {id:'move',     num:'02', title:'Move a Unit',      Comp:SecMove},
-  {id:'combat',   num:'03', title:'Attack & Odds',    Comp:SecCombat},
-  {id:'terrain',  num:'04', title:'Read the Ground',  Comp:SecTerrain},
-  {id:'ranks',    num:'05', title:'Promotion & XP',   Comp:SecRanks},
-  {id:'doctrines',num:'06', title:'Pick a Doctrine',  Comp:SecDoctrines},
-  {id:'wp',       num:'07', title:'War Points',       Comp:SecWarPoints},
-  {id:'dossier',  num:'08', title:'Read the Dossier', Comp:SecDossier},
+  {id:'briefing',          num:'01', title:'The Objective',     Comp:SecBriefing},
+  {id:'move',              num:'02', title:'Move a Unit',       Comp:SecMove},
+  {id:'combat',            num:'03', title:'Attack & Odds',     Comp:SecCombat},
+  {id:'terrain',           num:'04', title:'Read the Ground',   Comp:SecTerrain},
+  {id:'ranks',             num:'05', title:'Promotion & XP',    Comp:SecRanks},
+  {id:'doctrines',         num:'06', title:'Pick a Doctrine',   Comp:SecDoctrines},
+  {id:'wp',                num:'07', title:'War Points',        Comp:SecWarPoints},
+  {id:'dossier',           num:'08', title:'Read the Dossier',  Comp:SecDossier},
+  {id:'formation_trench',  num:'09', title:'Formation & Trench',Comp:SecFormationTrench},
 ];
 
 function FieldManual(){
@@ -795,7 +897,7 @@ function FieldManual(){
   useEffect(()=>{
     const hint=document.getElementById('hint');
     if(!hint)return;
-    const map={briefing:'▸ Click a square in the diagram',move:'▸ Click the soldier · then click a gold square',combat:'▸ Rotate the defender · resolve a roll',terrain:'▸ Click each biome to read its modifiers',ranks:'▸ Promote a unit · watch its stats change',doctrines:'▸ Inspect all three doctrines',wp:'▸ Spend at least one war point',dossier:'▸ Click each callout to highlight a panel'};
+    const map={briefing:'▸ Click a square in the diagram',move:'▸ Click the soldier · then click a gold square',combat:'▸ Rotate the defender · resolve a roll',terrain:'▸ Click each biome to read its modifiers',ranks:'▸ Promote a unit · watch its stats change',doctrines:'▸ Inspect all three doctrines',wp:'▸ Spend at least one war point',dossier:'▸ Click each callout to highlight a panel',formation_trench:'▸ Inspect both tabs — Formation then Entrenchment'};
     hint.textContent=finished?'▸ Briefing complete · return to the desk':map[SECTIONS[idx].id]||'▸ Read each section';
   },[idx,finished]);
 
@@ -806,7 +908,7 @@ function FieldManual(){
     <div className="manual">
       <aside className="toc">
         <div className="toc-head">
-          <div className="kicker">// MANUAL · v 0.1.5</div>
+          <div className="kicker">// MANUAL · v 0.1.6</div>
           <h2>Field Manual</h2>
           <span className="stamp">CADET</span>
           <div className="toc-progress">
