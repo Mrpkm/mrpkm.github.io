@@ -28,6 +28,8 @@
     image-rendering: pixelated;
     pointer-events: none;
     display: block;
+    transform: translateZ(0);
+    will-change: transform;
   }
 
   /* SVG layer with perspective-shaped hotspots and labels */
@@ -35,6 +37,8 @@
     position: absolute; inset: 0;
     width: 100%; height: 100%;
     pointer-events: none;
+    transform: translateZ(0);
+    will-change: transform;
   }
   #overlay .hit {
     pointer-events: all;
@@ -43,6 +47,7 @@
     stroke: rgba(111, 211, 214, 0);
     stroke-width: 3;
     stroke-linejoin: round;
+    filter: drop-shadow(0 0 0px transparent);
     transition: fill .18s ease, stroke .18s ease, filter .18s ease;
   }
   #overlay .hit:hover {
@@ -88,15 +93,6 @@
     pointer-events: none;
     z-index: 4;
     transition: font-size .15s ease;
-  }
-  .lbl::before, .lbl::after {
-    content: "";
-    display: inline-block;
-    width: 18px; height: 1px;
-    background: #6fd3d6;
-    vertical-align: middle;
-    margin: 0 8px;
-    box-shadow: 0 0 6px rgba(111,211,214,0.7);
   }
 
   /* Cursor tooltip */
