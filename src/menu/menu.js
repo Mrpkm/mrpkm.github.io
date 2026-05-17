@@ -237,39 +237,29 @@
 
     play: () => {
       var lastOnFile = !!localStorage.getItem('last_briefing');
+      // Inline SVG preview: the exact demo-map terrain (12 rows × 11 cols) with
+      // deployed unit positions. Rendered blurred as the Demonstration Map card background.
+      var demoSvg = `<svg width="100%" height="100%" viewBox="0 0 11 12" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"><rect width="11" height="12" fill="#8ab86a"/><g fill="#3a6b3a"><rect x="2" y="1" width="1" height="1"/><rect x="3" y="1" width="1" height="1"/><rect x="7" y="1" width="1" height="1"/><rect x="8" y="1" width="1" height="1"/><rect x="1" y="2" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="7" y="2" width="1" height="1"/><rect x="8" y="2" width="1" height="1"/><rect x="9" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="7" y="3" width="1" height="1"/><rect x="2" y="8" width="1" height="1"/><rect x="3" y="8" width="1" height="1"/><rect x="7" y="8" width="1" height="1"/><rect x="8" y="8" width="1" height="1"/><rect x="1" y="9" width="1" height="1"/><rect x="2" y="9" width="1" height="1"/><rect x="3" y="9" width="1" height="1"/><rect x="7" y="9" width="1" height="1"/><rect x="8" y="9" width="1" height="1"/><rect x="9" y="9" width="1" height="1"/><rect x="2" y="10" width="1" height="1"/><rect x="3" y="10" width="1" height="1"/><rect x="7" y="10" width="1" height="1"/><rect x="8" y="10" width="1" height="1"/></g><g fill="#9a9080"><rect x="1" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="8" y="3" width="1" height="1"/><rect x="9" y="3" width="1" height="1"/><rect x="1" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="7" y="4" width="1" height="1"/><rect x="8" y="4" width="1" height="1"/><rect x="9" y="4" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="7" y="5" width="1" height="1"/></g><g fill="#6b7a45"><rect x="4" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/><rect x="3" y="7" width="1" height="1"/><rect x="4" y="7" width="1" height="1"/><rect x="6" y="7" width="1" height="1"/><rect x="7" y="7" width="1" height="1"/></g><path stroke="rgba(0,0,0,0.18)" stroke-width="0.03" fill="none" d="M1,0 L1,12 M2,0 L2,12 M3,0 L3,12 M4,0 L4,12 M5,0 L5,12 M6,0 L6,12 M7,0 L7,12 M8,0 L8,12 M9,0 L9,12 M10,0 L10,12 M0,1 L11,1 M0,2 L11,2 M0,3 L11,3 M0,4 L11,4 M0,5 L11,5 M0,6 L11,6 M0,7 L11,7 M0,8 L11,8 M0,9 L11,9 M0,10 L11,10 M0,11 L11,11"/><g fill="rgba(200,55,55,0.9)"><circle cx="10.5" cy="0.5" r="0.35"/><circle cx="9.5" cy="0.5" r="0.35"/><circle cx="8.5" cy="0.5" r="0.35"/><circle cx="2.5" cy="0.5" r="0.35"/><circle cx="1.5" cy="0.5" r="0.35"/><circle cx="0.5" cy="0.5" r="0.35"/><circle cx="9.5" cy="1.5" r="0.35"/><circle cx="8.5" cy="1.5" r="0.35"/><circle cx="7.5" cy="1.5" r="0.35"/><circle cx="6.5" cy="1.5" r="0.35"/><circle cx="5.5" cy="1.5" r="0.35"/><circle cx="3.5" cy="1.5" r="0.35"/><circle cx="2.5" cy="1.5" r="0.35"/><circle cx="1.5" cy="1.5" r="0.35"/></g><g fill="rgba(60,130,255,0.9)"><circle cx="0.5" cy="11.5" r="0.35"/><circle cx="1.5" cy="11.5" r="0.35"/><circle cx="2.5" cy="11.5" r="0.35"/><circle cx="8.5" cy="11.5" r="0.35"/><circle cx="9.5" cy="11.5" r="0.35"/><circle cx="10.5" cy="11.5" r="0.35"/><circle cx="1.5" cy="10.5" r="0.35"/><circle cx="2.5" cy="10.5" r="0.35"/><circle cx="3.5" cy="10.5" r="0.35"/><circle cx="4.5" cy="10.5" r="0.35"/><circle cx="5.5" cy="10.5" r="0.35"/><circle cx="7.5" cy="10.5" r="0.35"/><circle cx="8.5" cy="10.5" r="0.35"/><circle cx="9.5" cy="10.5" r="0.35"/></g></svg>`;
+
       panel(`
         <header>
           <h2>Play Game</h2>
           <span class="stamp">Tactical</span>
         </header>
         <p class="meta">Select an operation mode to begin</p>
-        <div class="cmd-grid-panel">
+
+        <div class="cmd-grid-playable">
           <div class="cmd-card-p primary" id="card-load">
             <span class="ckey">F1</span>
             <h4>&#9658; Load Briefing</h4>
             <div class="cdesc">Drop a pre-game code into the field command desk and the map unfolds.</div>
             <span class="cstat">PASTE &amp; LOAD</span>
           </div>
-          <div class="cmd-card-p" id="card-demo">
-            <span class="ckey">F2</span>
-            <h4>&#9658; Demonstration Map</h4>
-            <div class="cdesc">Load a sealed practice briefing &mdash; Plain doctrine, 14 units, mixed terrain.</div>
-            <span class="cstat">LOAD DEMO</span>
-          </div>
           <div class="cmd-card-p" id="card-setup-play">
             <span class="ckey">F3</span>
             <h4>&#9658; Pre-Game Setup</h4>
             <div class="cdesc">Pick a doctrine, spend war-points, place your army on the half-board.</div>
             <span class="cstat">OPEN SETUP</span>
-          </div>
-          <div class="cmd-card-p-wrapper">
-            <div class="cmd-card-p coming-soon-p" id="card-last">
-              <span class="ckey">F5</span>
-              <h4>&#9658; Restore Last Map</h4>
-              <div class="cdesc">Re-open the briefing you most recently loaded from the field safe.</div>
-              <span class="cstat">${lastOnFile ? 'ON FILE' : 'NONE ON FILE'}</span>
-            </div>
-            <div class="coming-soon-badge-p">COMING SOON</div>
           </div>
           <div class="cmd-card-p" id="card-builder-play">
             <span class="ckey">F6</span>
@@ -278,20 +268,45 @@
             <span class="cstat">OPEN BUILDER</span>
           </div>
         </div>
+
+        <div class="cmd-section-label">Upcoming Operations</div>
+
+        <div class="cmd-grid-upcoming">
+          <div class="cmd-card-p-wrapper">
+            <div class="cmd-card-p coming-soon-p">
+              <h4>&#9733; AI Game</h4>
+              <div class="cdesc">Tactical sandbox &mdash; full rules engine, NATO symbols, AI opponent.</div>
+              <span class="cstat">LAUNCH</span>
+            </div>
+            <div class="coming-soon-badge-p">COMING SOON</div>
+          </div>
+          <div class="cmd-card-p-wrapper">
+            <div class="cmd-card-p coming-soon-p">
+              <span class="ckey">F5</span>
+              <h4>&#9658; Restore Last Map</h4>
+              <div class="cdesc">Re-open the briefing you most recently loaded from the field safe.</div>
+              <span class="cstat">${lastOnFile ? 'ON FILE' : 'NONE ON FILE'}</span>
+            </div>
+            <div class="coming-soon-badge-p">COMING SOON</div>
+          </div>
+          <div class="cmd-card-p-wrapper">
+            <div class="cmd-card-p demo-preview coming-soon-p">
+              <div class="card-preview" aria-hidden="true">${demoSvg}</div>
+              <span class="ckey">F2</span>
+              <h4>&#9658; Demonstration Map</h4>
+              <div class="cdesc">Load a sealed practice briefing &mdash; Plain doctrine, 14 units, mixed terrain.</div>
+              <span class="cstat">LOAD DEMO</span>
+            </div>
+            <div class="coming-soon-badge-p">COMING SOON</div>
+          </div>
+        </div>
       `);
+
       document.getElementById('card-load').addEventListener('click', () => {
         window.location.href = '../../core-map/index.html';
       });
-      document.getElementById('card-demo').addEventListener('click', () => {
-        window.location.href = '../../core-map/index.html?action=demo';
-      });
       document.getElementById('card-setup-play').addEventListener('click', () => {
         window.location.href = '../tools/pregame-setup.html';
-      });
-      document.getElementById('card-last').addEventListener('click', () => {
-        if (localStorage.getItem('last_briefing')) {
-          window.location.href = '../../core-map/index.html?action=restore';
-        }
       });
       document.getElementById('card-builder-play').addEventListener('click', () => {
         window.location.href = 'map-builder.html';

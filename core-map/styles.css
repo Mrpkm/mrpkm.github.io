@@ -165,23 +165,8 @@ body::after {
 
 /* ── Empty desk: command-buttons view ───────────────────────── */
 #desk-view {
+  /* transparent placeholder — blurred #bg-desk shows through */
   position: relative;
-  width: min(1180px, 96%);
-  max-height: 100%;
-  background:
-    radial-gradient(circle 90px at 88% 14%, rgba(120,80,30,0.22), rgba(120,80,30,0) 70%),
-    radial-gradient(circle 60px at 88% 14%, transparent 50%, rgba(70,40,10,0.20) 52%, transparent 60%),
-    repeating-linear-gradient(0deg, rgba(120,90,40,0.06) 0 2px, transparent 2px 6px),
-    radial-gradient(ellipse at 18% 18%, rgba(150,100,30,0.16), transparent 60%),
-    radial-gradient(ellipse at 82% 88%, rgba(80,40,10,0.20), transparent 60%),
-    var(--paper);
-  color: var(--ink);
-  border: 2px solid var(--ink);
-  box-shadow:
-    0 0 0 6px var(--paper-dark),
-    0 0 0 8px var(--ink),
-    0 30px 60px rgba(0,0,0,0.7);
-  padding: 26px 30px 28px;
 }
 
 .desk-header {

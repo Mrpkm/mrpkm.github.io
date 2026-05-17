@@ -1313,10 +1313,17 @@ function MiniMap({ placements }) {
 function BriefingPage({ doctrineId, setup }) {
   const md = useMemo(() => generateMD(doctrineId, setup), [doctrineId, setup]);
   const [copied, setCopied] = useState(false);
+  const [saved,  setSaved]  = useState(false);
   const twpPhase = localStorage.getItem('twp_setup_phase');
   const hasUnits = (setup.placements || []).length > 0;
   function copy() {
     navigator.clipboard.writeText(md).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  }
+  function saveToSession() {
+    localStorage.setItem('last_briefing', md);
+    localStorage.setItem('pregame_briefing', md);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 1600);
   }
   function download() {
     const blob = new Blob([md], { type: 'text/markdown' });
@@ -1343,6 +1350,11 @@ function BriefingPage({ doctrineId, setup }) {
       window.location.href = '../../core-map/index.html';
     }
   }
+  function deployAsP1() {
+    localStorage.setItem('twp_p1_brief', md);
+    localStorage.setItem('twp_setup_phase', '2');
+    window.location.replace(window.location.pathname); // fresh load for P2 setup
+  }
   return (
     <div className="page">
       <header className="page-head">
@@ -1357,8 +1369,8 @@ function BriefingPage({ doctrineId, setup }) {
         <div className="brief-actions">
           <button className="btn" onClick={copy}>{copied ? '✓ copied' : 'Copy .md'}</button>
           <button className="btn alt" onClick={download}>Download .md</button>
-          <button className="btn alt" onClick={deploy} disabled={!hasUnits} style={{background: hasUnits ? '#4a6b3a' : '#6b3a3a', borderColor: hasUnits ? '#4a6b3a' : '#6b3a3a', letterSpacing:'3px', opacity: hasUnits ? 1 : 0.5, cursor: hasUnits ? 'pointer' : 'not-allowed'}} title={hasUnits ? '' : 'Place units on the map first (MAP tab)'}>
-            {twpPhase === '1' ? 'DONE — PLAYER 1 ▸' : twpPhase === '2' ? '▶ DEPLOY TO BATTLE' : '▶ Deploy to Game'}
+          <button className="btn alt" onClick={saveToSession} disabled={!hasUnits} style={{background: hasUnits ? '#4a6b3a' : '#6b3a3a', borderColor: hasUnits ? '#4a6b3a' : '#6b3a3a', letterSpacing:'3px', opacity: hasUnits ? 1 : 0.5, cursor: hasUnits ? 'pointer' : 'not-allowed'}} title={hasUnits ? 'Save briefing to session storage' : 'Place units on the map first (MAP tab)'}>
+            {saved ? '✓ SAVED' : '▶ Save Briefing'}
           </button>
         </div>
       </header>
@@ -1377,6 +1389,27 @@ function BriefingPage({ doctrineId, setup }) {
           </span>
         </div>
       )}
+      <button
+        onClick={twpPhase === '2' ? deploy : deployAsP1}
+        disabled={!hasUnits}
+        style={{
+          display:'block', width:'100%', marginBottom:'18px',
+          padding:'18px 22px',
+          background: hasUnits ? 'var(--red)' : 'rgba(157,42,42,0.35)',
+          color:'#fff',
+          border:'3px solid var(--ink)',
+          fontFamily:"'Special Elite', monospace",
+          fontSize:'22px', letterSpacing:'6px', textTransform:'uppercase',
+          cursor: hasUnits ? 'pointer' : 'not-allowed',
+          opacity: hasUnits ? 1 : 0.5,
+          boxShadow: hasUnits ? '0 0 0 4px var(--paper-dark), 0 0 0 6px var(--ink), 0 10px 22px rgba(0,0,0,0.45)' : 'none',
+          transition:'transform 0.15s ease, box-shadow 0.15s ease',
+        }}
+        onMouseEnter={e => { if (hasUnits) e.currentTarget.style.transform='translateY(-2px)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform='none'; }}
+      >
+        {twpPhase === '2' ? '▸ PLAYER 2 READY?' : '▸ PLAYER 1 READY?'}
+      </button>
       <div className="brief-cols">
         <div className="card">
           <div className="card-head">
