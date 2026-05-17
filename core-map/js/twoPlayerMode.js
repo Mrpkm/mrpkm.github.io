@@ -621,15 +621,20 @@
     return { moveSet: moveSet, attackSet: attackSet };
   }
 
+  var _FROT = { N: -90, S: 90, E: 0, W: 180 };
+  var _FDR  = { N: -1, S: 1, E: 0, W: 0 };
+  var _FDC  = { N: 0, S: 0, E: 1, W: -1 };
+
   /* ── Unit DOM rendering ───────────────────────────────────────── */
   function _renderAllUnits() {
     _markTargetRows();
     var hints = _computeHints();
 
-    // Clear cell highlights
+    // Clear cell highlights and old facing indicators
     document.querySelectorAll('#map-root .cell').forEach(function (el) {
       el.classList.remove('legal-move', 'attack-target', 'twp-selected-cell');
     });
+    document.querySelectorAll('#map-root .twp-fi').forEach(function (el) { el.remove(); });
     Object.keys(hints.moveSet).forEach(function (key) {
       var p = key.split(',');
       var c = window.MapRenderer.getCellEl(+p[0], +p[1]);
@@ -669,13 +674,6 @@
       var inner = el.querySelector('.twp-inner');
       if (inner) inner.style.transform = 'rotate(' + (-_boardRot) + 'deg)';
 
-      // Update facing indicator — subtract board rotation so net visual is just the facing angle
-      var facingEl = el.querySelector('.twp-facing');
-      if (facingEl) {
-        var FROT = { N: -90, S: 90, E: 0, W: 180 };
-        facingEl.style.transform = 'rotate(' + ((FROT[unit.facing] || 0) - _boardRot) + 'deg)';
-      }
-
       _updateHpPips(el, unit);
     });
 
@@ -692,6 +690,20 @@
         if (sc) sc.classList.add('twp-selected-cell');
       }
     }
+
+    // Place ">" facing indicator in the cell directly ahead of each unit
+    _units.forEach(function (unit) {
+      var fr = unit.row + (_FDR[unit.facing] || 0);
+      var fc = unit.col + (_FDC[unit.facing] || 0);
+      if (fr < 1 || fr > _gridRows || fc < 1 || fc > _gridCols) return;
+      var fCell = window.MapRenderer.getCellEl(fr, fc);
+      if (!fCell) return;
+      var fi = document.createElement('span');
+      fi.className = 'twp-fi twp-fi-p' + unit.player;
+      fi.textContent = '>';
+      fi.style.transform = 'rotate(' + ((_FROT[unit.facing] || 0) - _boardRot) + 'deg)';
+      fCell.appendChild(fi);
+    });
 
     // Rotate the board and compass
     var mapRoot = document.getElementById('map-root');
@@ -787,13 +799,6 @@
     }
     inner.appendChild(hpBar);
     el.appendChild(inner);
-
-    // Facing indicator — outside .twp-inner so rotation is independent
-    var fInd = document.createElement('span');
-    fInd.className = 'twp-facing';
-    fInd.textContent = '>';
-    el.appendChild(fInd);
-
     return el;
   }
 

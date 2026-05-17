@@ -958,22 +958,22 @@ body::after {
   background: rgba(255, 211, 74, 0.15) !important;
 }
 
-/* Facing indicator — blue ">" centered on each unit */
-.twp-facing {
+/* Facing indicator — ">" placed in the cell ahead of each unit */
+.twp-fi {
   position: absolute;
   inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(90, 180, 255, 0.92);
   font-size: 20px;
   font-weight: bold;
   line-height: 1;
   pointer-events: none;
-  z-index: 6;
-  text-shadow: 0 0 4px rgba(0,0,0,0.95), 0 0 8px rgba(0,80,255,0.4);
-  transition: transform 0.12s ease;
+  z-index: 2;
+  text-shadow: 0 0 4px rgba(0,0,0,0.95);
 }
+.twp-fi-p1 { color: rgba(80, 160, 255, 0.90); }
+.twp-fi-p2 { color: rgba(255, 90, 90, 0.90); }
 
 /* Target rows — subtle border shows each player's breach objective */
 .twp-target-p1 { border-top: 2px solid rgba(44, 100, 200, 0.60) !important; }
