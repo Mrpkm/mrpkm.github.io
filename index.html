@@ -5,6 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>HQ // COMMAND TERMINAL</title>
 <link rel="icon" type="image/png" href="assets/game-icons/war_point.png">
+<script>
+  (function () {
+    var link = document.querySelector("link[rel='icon']");
+    if (!link) return;
+    var img = new Image();
+    img.onload = function () {
+      var c = document.createElement('canvas'); c.width = c.height = 64;
+      var ctx = c.getContext('2d');
+      ctx.beginPath(); ctx.arc(32, 32, 32, 0, Math.PI * 2); ctx.clip();
+      var s = Math.min(img.naturalWidth, img.naturalHeight);
+      ctx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, 64, 64);
+      link.href = c.toDataURL();
+    };
+    img.src = link.href;
+  })();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=VT323&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
 <style>
   /* ── Design-system tokens (inlined from colors_and_type.css) ── */
