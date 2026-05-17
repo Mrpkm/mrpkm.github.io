@@ -688,7 +688,7 @@ function UnitBuyRow({ unitKey, count, onCount, capRemaining, disabled, freeCount
   );
 }
 
-function XPRow({ classKey, slots, slotCap, maxLevel, onChange, disabled }) {
+function XPRow({ classKey, slots, slotCap, maxLevel, onChange, disabled, wpRemaining }) {
   const label = classKey === 'heavy' ? 'Heavy (Tank/Mot.)' : classKey === 'infantry' ? 'Infantry' : classKey === 'cavalry' ? 'Cavalry' : 'Artillery';
   const totalCost = slots.reduce((s, l) => s + xpCumCost(l), 0);
 
@@ -696,7 +696,7 @@ function XPRow({ classKey, slots, slotCap, maxLevel, onChange, disabled }) {
     const next = slots.slice(); next[i] = lvl;
     onChange(next.filter(x => x > 0));
   }
-  function addSlot() { if (slots.length < slotCap) onChange([...slots, 1]); }
+  function addSlot() { if (slots.length < slotCap && wpRemaining >= 2) onChange([...slots, 1]); }
   function rmSlot(i) { const next = slots.slice(); next.splice(i, 1); onChange(next); }
 
   return (
@@ -718,13 +718,13 @@ function XPRow({ classKey, slots, slotCap, maxLevel, onChange, disabled }) {
               <div className="rank-controls">
                 <button disabled={disabled || lvl <= 1} onClick={() => setSlot(i, lvl - 1)}>&#x2212;</button>
                 <span className="rank-lvl">L{lvl}</span>
-                <button disabled={disabled || lvl >= maxLevel} onClick={() => setSlot(i, lvl + 1)}>+</button>
+                <button disabled={disabled || lvl >= maxLevel || wpRemaining < (xpCumCost(lvl + 1) - xpCumCost(lvl))} onClick={() => setSlot(i, lvl + 1)}>+</button>
                 <button className="rank-rm" onClick={() => rmSlot(i)} disabled={disabled} title="Remove">&#x2715;</button>
               </div>
             </div>
           ))}
           {slots.length < slotCap && (
-            <button className="xp-add" onClick={addSlot} disabled={disabled}>+ add upgrade slot</button>
+            <button className="xp-add" onClick={addSlot} disabled={disabled || wpRemaining < 2}>+ add upgrade slot</button>
           )}
         </div>
       )}
@@ -1043,11 +1043,16 @@ function RosterSubPage({ doctrine, setup, setSetup }) {
 function BuySubPage({ doctrine, setup, setSetup }) {
   const isPlain = doctrine.id === 'plain';
   const sums = sumByClass(setup.bought);
+  const spent = computeSpent(setup, doctrine);
+  const wpRemaining = Math.max(0, doctrine.budget - spent.total);
   function setBought(k, v) { setSetup(s => ({ ...s, bought: { ...s.bought, [k]: v } })); }
   function toggleDisabled(key) { setSetup(s => ({ ...s, disabled: { ...s.disabled, [key]: !s.disabled[key] } })); }
   function capRemaining(unitKey) {
     const cls = UNITS[unitKey].cls;
-    return Math.max(0, (doctrine.buyCaps[cls] ?? 0) - sums[cls]);
+    const classCap = Math.max(0, (doctrine.buyCaps[cls] ?? 0) - sums[cls]);
+    const cost = UNITS[unitKey].cost;
+    const wpCap = cost > 0 ? Math.floor(wpRemaining / cost) : 0;
+    return Math.min(classCap, wpCap);
   }
   return (
     <section className="card sub-card">
@@ -1080,6 +1085,8 @@ function BuySubPage({ doctrine, setup, setSetup }) {
 }
 
 function XPSubPage({ doctrine, setup, setSetup }) {
+  const spent = computeSpent(setup, doctrine);
+  const wpRemaining = Math.max(0, doctrine.budget - spent.total);
   function setXP(k, list) { setSetup(s => ({ ...s, xp: { ...s.xp, [k]: list } })); }
   function toggleDisabled(key) { setSetup(s => ({ ...s, disabled: { ...s.disabled, [key]: !s.disabled[key] } })); }
   return (
@@ -1102,6 +1109,7 @@ function XPSubPage({ doctrine, setup, setSetup }) {
             maxLevel={doctrine.xpMaxLevel}
             onChange={(list) => setXP(unitKey, list)}
             disabled={setup.disabled.xp}
+            wpRemaining={wpRemaining}
           />
         );
       })}
@@ -1110,6 +1118,8 @@ function XPSubPage({ doctrine, setup, setSetup }) {
 }
 
 function BonusesSubPage({ doctrine, setup, setSetup }) {
+  const spent = computeSpent(setup, doctrine);
+  const wpRemaining = Math.max(0, doctrine.budget - spent.total);
   function toggleDisabled(key) { setSetup(s => ({ ...s, disabled: { ...s.disabled, [key]: !s.disabled[key] } })); }
   return (
     <section className="card sub-card">
@@ -1127,7 +1137,7 @@ function BonusesSubPage({ doctrine, setup, setSetup }) {
           <div className="bonus-name">Spawn Entrenched</div>
           <div className="bonus-desc">3 WP each · light units only · skips the 3-turn dig-in timer</div>
         </div>
-        <Stepper value={setup.entrenched} max={20} onChange={(v) => setSetup(s => ({ ...s, entrenched: v }))} disabled={setup.disabled.bonuses} />
+        <Stepper value={setup.entrenched} max={Math.min(20, setup.entrenched + Math.floor(wpRemaining / 3))} onChange={(v) => setSetup(s => ({ ...s, entrenched: v }))} disabled={setup.disabled.bonuses} />
       </div>
       <div className={`bonus-row ${setup.disabled.bonuses ? 'dis' : ''}`}>
         <ChromaImg src="../../assets/game-icons/formation.png" mode="green" className="bonus-icon" alt="formation" />
@@ -1135,7 +1145,7 @@ function BonusesSubPage({ doctrine, setup, setSetup }) {
           <div className="bonus-name">Spawn in Formation <span className="muted">(pairs)</span></div>
           <div className="bonus-desc">5 WP per pair · two light units stacked · immune to double-attack</div>
         </div>
-        <Stepper value={setup.formations} max={10} onChange={(v) => setSetup(s => ({ ...s, formations: v }))} disabled={setup.disabled.bonuses} />
+        <Stepper value={setup.formations} max={Math.min(10, setup.formations + Math.floor(wpRemaining / 5))} onChange={(v) => setSetup(s => ({ ...s, formations: v }))} disabled={setup.disabled.bonuses} />
       </div>
     </section>
   );

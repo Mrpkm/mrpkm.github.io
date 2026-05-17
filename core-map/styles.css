@@ -1473,12 +1473,12 @@ body::after {
   50%      { box-shadow: 0 0 0 4px var(--teal), 0 0 32px rgba(111,211,214,0.85); }
 }
 
-/* During tutorial: boost zone overlay opacity so colors show through the semi-dark backdrop */
+/* During tutorial: keep zone overlays at normal game vibrancy */
 #map-root.twp-tutorial-on .cell.twp-zone-blue:not(.legal-move):not(.attack-target)::after {
-  background: rgba(50, 80, 255, 0.72) !important;
+  background: rgba(60, 90, 200, 0.18) !important;
 }
 #map-root.twp-tutorial-on .cell.twp-zone-red:not(.legal-move):not(.attack-target)::after {
-  background: rgba(255, 50, 50, 0.75) !important;
+  background: rgba(200, 60, 60, 0.20) !important;
 }
 
 /* Minimap breach flash — gold burst when a unit reaches the enemy back row */
