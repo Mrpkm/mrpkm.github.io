@@ -45,7 +45,83 @@
   <div id="stage">
 
     <!-- ─────────── EMPTY DESK VIEW ─────────── -->
-    <div id="desk-view"></div>
+    <div id="desk-view">
+      <div class="desk-header">
+        <div>
+          <div class="desk-title">Field Command Desk</div>
+          <div class="desk-subtitle">06 JUN 1944 &middot; 04:00 hrs &middot; Map room empty</div>
+        </div>
+        <div class="desk-stamp">AWAITING ORDERS</div>
+      </div>
+
+      <p class="desk-prompt">
+        The map case is empty, Commander. <strong>Drop a sealed briefing onto the desk</strong>
+        and the tactical map will appear &mdash; or pick a routine below.
+      </p>
+
+      <div class="cmd-grid">
+
+        <!-- 1. 2-Player Battle -->
+        <div class="cmd-card primary" data-action="2player">
+          <span class="cmd-key">F1</span>
+          <h4>⚔ 2-Player Battle</h4>
+          <div class="cmd-desc">Face a human opponent on a shared screen &mdash; full attack, counter-strike, terrain and trench rules.</div>
+          <span class="cmd-stat">ENGAGE</span>
+        </div>
+
+        <!-- 2. AI Game (coming soon) -->
+        <div class="cmd-card alert" data-action="ai">
+          <span class="cmd-key">F2</span>
+          <h4>★ AI Game</h4>
+          <div class="cmd-desc">Open the standalone tactical sandbox with NATO symbols and the full rules engine.</div>
+          <span class="cmd-stat">LAUNCH</span>
+        </div>
+
+        <!-- 3. 2-Player Game (Load Briefing repurposed) -->
+        <div class="cmd-card" data-action="paste">
+          <span class="cmd-key">F3</span>
+          <h4>⚔ 2-Player Game</h4>
+          <div class="cmd-desc">Set up both armies and deploy for battle &mdash; Player 1 builds first, then Player 2.</div>
+          <span class="cmd-stat">START</span>
+        </div>
+
+        <!-- 4. Pre-game setup -->
+        <div class="cmd-card" data-action="setup">
+          <span class="cmd-key">F4</span>
+          <h4>▸ Pre-Game Setup</h4>
+          <div class="cmd-desc">Pick a doctrine, spend war-points, place your army on the half-board.</div>
+          <span class="cmd-stat">OPEN SETUP</span>
+        </div>
+
+        <!-- 5. Last briefing -->
+        <div class="cmd-card" data-action="last">
+          <span class="cmd-key">F5</span>
+          <h4>▸ Restore Last Map</h4>
+          <div class="cmd-desc">Re-open the briefing you most recently loaded (held in the field safe).</div>
+          <span class="cmd-stat" id="last-status">NONE ON FILE</span>
+        </div>
+
+        <!-- 6. Map builder -->
+        <div class="cmd-card" data-action="builder">
+          <span class="cmd-key">F6</span>
+          <h4>▸ Tactical Map Editor</h4>
+          <div class="cmd-desc">Place terrain, decorations and unit tokens before sealing the briefing.</div>
+          <span class="cmd-stat">OPEN BUILDER</span>
+        </div>
+
+      </div>
+
+      <div class="desk-dropzone">
+        <span><b>HINT.</b> Briefings arrive from the Pre-Game Setup screen automatically &mdash;
+          this desk reads the field safe (localStorage) on every load.</span>
+        <span class="blink">_</span>
+      </div>
+
+      <div class="desk-footer">
+        <span>// WEATHER: OVERCAST &middot; WIND SW 4 KTS</span>
+        <span>// SIG: STRONG <span class="blink">▮</span></span>
+      </div>
+    </div>
 
     <!-- ─────────── FIELD MAP VIEW ─────────── -->
     <div id="map-view">

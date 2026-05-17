@@ -115,7 +115,8 @@
         break;
 
       case 'paste':
-        ta.focus();
+        localStorage.setItem('twp_setup_phase', '1');
+        window.location.href = '../src/tools/pregame-setup.html';
         break;
 
       case 'demo':
