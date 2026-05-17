@@ -143,7 +143,7 @@ table.hq-tab td.num { font-family:var(--font-terminal); color:var(--hq-red); fon
 .unit-chip img { max-width:100%; max-height:100%; image-rendering:pixelated; filter:drop-shadow(0 1px 0 rgba(0,0,0,0.55)); pointer-events:none; }
 .unit-chip.player { box-shadow:0 0 0 2px rgba(44,77,138,0.85), inset 0 0 0 1px rgba(255,255,255,0.05); }
 .unit-chip.enemy  { box-shadow:0 0 0 2px rgba(178,43,43,0.85), inset 0 0 0 1px rgba(255,255,255,0.05); filter:sepia(0.2) hue-rotate(320deg) saturate(1.25); }
-.unit-chip .facing-tag { position:absolute; top:0; right:0; background:var(--hq-ink); color:var(--hq-teal); font-family:var(--font-terminal); font-size:10px; line-height:1; padding:1px 3px; border:1px solid var(--hq-paper-dark); z-index:5; pointer-events:none; }
+.unit-chip .facing-arrow { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:bold; line-height:1; color:var(--hq-teal); text-shadow:0 0 5px rgba(0,0,0,1),0 0 2px rgba(0,0,0,1); pointer-events:none; z-index:5; }
 .mb-facing { position:absolute; z-index:5; font-family:var(--font-terminal); font-size:14px; color:var(--hq-teal); text-shadow:0 0 4px rgba(111,211,214,0.9); pointer-events:none; }
 .hq-flag { position:absolute; inset:4px; z-index:4; display:flex; align-items:center; justify-content:center; font-family:var(--font-display); font-size:13px; color:var(--hq-paper); background:var(--hq-red); border:1px solid var(--hq-ink); letter-spacing:1px; box-shadow:0 1px 3px rgba(0,0,0,0.4); }
 .coach-hand { position:absolute; pointer-events:none; z-index:20; font-family:var(--font-display); color:var(--hq-teal); text-shadow:0 0 8px rgba(111,211,214,0.85); font-size:22px; letter-spacing:1px; animation:hand-bob 1.0s ease-in-out infinite; white-space:nowrap; }
@@ -360,8 +360,9 @@ const ICON = {
 };
 
 function key(r,c){ return r+','+c; }
-function facingGlyph(f){ return {N:'▲',S:'▼',E:'▶',W:'◀'}[f]||'▲'; }
-function facingPos(f){ switch(f){ case 'N':return{top:-2,left:'50%',transform:'translateX(-50%)'}; case 'S':return{bottom:-2,left:'50%',transform:'translateX(-50%)'}; case 'E':return{right:-2,top:'50%',transform:'translateY(-50%)'}; case 'W':return{left:-2,top:'50%',transform:'translateY(-50%)'}; } }
+const FACING_ROT = { N:-90, S:90, E:0, W:180 };
+const FACING_TX  = { N:0, S:0, E:14, W:-14 };
+const FACING_TY  = { N:-14, S:14, E:0, W:0 };
 
 const UNIT_ABBR = {infantry:'INF',cavalry:'CAV',tank:'TNK',motorized:'MOT',artillery:'ART'};
 
@@ -406,7 +407,7 @@ function MiniBoard({ rows, cols, terrain={}, units=[], hq=[], legal=new Set(), a
                 ?<img src={sprites[u.type]} alt={u.type} draggable={false} />
                 :<span style={{fontFamily:'VT323,monospace',color:'#fff',textShadow:'0 0 4px #000',fontSize:scale*0.3}}>{UNIT_ABBR[u.type]||'?'}</span>
               }
-              {u.facing&&<div className="facing-tag">{u.facing}</div>}
+              {u.facing&&<div className="facing-arrow" style={{transform:`translate(${FACING_TX[u.facing]||0}px,${FACING_TY[u.facing]||0}px) rotate(${FACING_ROT[u.facing]||0}deg)`}}>{'>'}</div>}
             </div>
           </div>
         );
