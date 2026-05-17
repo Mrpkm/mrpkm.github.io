@@ -226,7 +226,7 @@
       <div class="letter">
         <div class="from"><span>&#9993; Contact &mdash; Bugs &amp; Feature Requests</span><span>HQ</span></div>
         <div>Found a bug? Have an idea for a new feature or rule? Send your report directly
-          to the developer at <strong><a href="mailto:paradikendem@gmail.com" style="color:inherit;">paradikendem@gmail.com</a></strong>.
+          to the developer at <strong><a href="mailto:mrpoirot431@gmail.com" style="color:inherit;">mrpoirot431@gmail.com</a></strong>.
           All feedback is read and appreciated &mdash; the game gets better with your
           field reports.</div>
       </div>
